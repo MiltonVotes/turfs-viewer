@@ -73,7 +73,7 @@
       
           const lat = parseFloat(voter.Latitude);
           const lng = parseFloat(voter.Longitude);
-          const visited = String(voter.Visited).toLowerCase() === 'true';
+          const visited = (voter.Visited + '').toLowerCase().trim() === 'true';
       
           const marker = L.marker([lat, lng], {
             icon: L.icon({
