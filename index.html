@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Turfs Viewer</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <style>
+    #map { height: 500px; }
+    #voterCard {
+      margin-top: 1rem;
+      border: 1px solid #ccc;
+      padding: 10px;
+      border-radius: 5px;
+    }
+    select, button {
+      padding: 5px;
+      margin: 5px 0;
+    }
+    .hidden { display: none; }
+  </style>
+</head>
+<body>
+  <h2>Turfs Viewer</h2>
+  <label for="sheetSelect">Select Turf Sheet:</label>
+  <select id="sheetSelect"></select>
+  <div id="map"></div>
+  <div id="voterCard" class="hidden"></div>
+
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <script>
+    const sheetUrlsFile = 'sheet_urls.json'; // should be in same GitHub Pages repo
+    let map = L.map('map').setView([42.25, -71.07], 14);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(map);
+
+    const sheetSelect = document.getElementById('sheetSelect');
+    const voterCard = document.getElementById('voterCard');
+    let allMarkers = [];
+
+    fetch(sheetUrlsFile)
+      .then(res => res.json())
+      .then(urls => {
+        for (const name in urls) {
+          const opt = document.createElement('option');
+          opt.value = urls[name];
+          opt.textContent = name;
+          sheetSelect.appendChild(opt);
+        }
+      });
+
+    sheetSelect.addEventListener('change', async () => {
+      voterCard.classList.add('hidden');
+      allMarkers.forEach(m => map.removeLayer(m));
+      allMarkers = [];
+      const url = sheetSelect.value;
+      try {
+        const data = await fetch(url + '?action=get')
+          .then(res => res.json());
+
+        data.forEach(voter => {
+          if (!voter.Latitude || !voter.Longitude) return;
+
+          const lat = parseFloat(voter.Latitude);
+          const lng = parseFloat(voter.Longitude);
+          const visited = voter.Visited?.toLowerCase() === 'true';
+
+          const marker = L.marker([lat, lng], {
+            icon: L.icon({
+              iconUrl: visited ? 'https://maps.google.com/mapfiles/ms/icons/green-dot.png'
+                               : 'https://maps.google.com/mapfiles/ms/icons/red-dot.png',
+              iconSize: [32, 32],
+              iconAnchor: [16, 32]
+            })
+          }).addTo(map);
+
+          marker.on('click', () => showCard(voter, url));
+          allMarkers.push(marker);
+        });
+      } catch (err) {
+        alert('Could not load sheet data. You may not have access.');
+      }
+    });
+
+    function showCard(voter, url) {
+      voterCard.innerHTML = '';
+      for (const key of ['Voter_ID', 'Name', 'Address', 'Age', 'Party', 'Precinct', 'Turf', 'Occupation', 'Voted_Town', 'Voted_MBTA', 'Voted_State', 'Visited']) {
+        voterCard.innerHTML += `<b>${key}:</b> ${voter[key] || ''}<br>`;
+      }
+      const btn = document.createElement('button');
+      btn.textContent = 'Mark Visited';
+      btn.onclick = () => markVisited(url, voter);
+      voterCard.appendChild(btn);
+      voterCard.classList.remove('hidden');
+    }
+
+    async function markVisited(url, voter) {
+      voter.Visited = true;
+      const postData = { Row: voter.Row, Visited: 'TRUE' };
+      try {
+        const res = await fetch(url, {
+          method: 'POST',
+          body: JSON.stringify(postData),
+          headers: { 'Content-Type': 'application/json' }
+        });
+        if (res.ok) alert('Marked visited! Refresh to see map color update.');
+        else alert('Failed to update.');
+      } catch (err) {
+        alert('Error updating sheet.');
+      }
+    }
+  </script>
+</body>
+</html>
