@@ -56,16 +56,25 @@
       allMarkers = [];
       const url = sheetSelect.value;
       try {
-        const data = await fetch(url + '?action=get')
-          .then(res => res.json());
-
+        const res = await fetch(url + '?action=get');
+      
+        if (!res.ok) {
+          const text = await res.text();
+          console.error('HTTP error:', res.status, res.statusText);
+          console.error('Response body:', text);
+          throw new Error(`HTTP ${res.status}`);
+        }
+      
+        const data = await res.json();
+        console.log('Fetched data:', data);
+      
         data.forEach(voter => {
           if (!voter.Latitude || !voter.Longitude) return;
-
+      
           const lat = parseFloat(voter.Latitude);
           const lng = parseFloat(voter.Longitude);
           const visited = voter.Visited?.toLowerCase() === 'true';
-
+      
           const marker = L.marker([lat, lng], {
             icon: L.icon({
               iconUrl: visited ? 'https://maps.google.com/mapfiles/ms/icons/green-dot.png'
@@ -74,12 +83,14 @@
               iconAnchor: [16, 32]
             })
           }).addTo(map);
-
+      
           marker.on('click', () => showCard(voter, url));
           allMarkers.push(marker);
         });
+      
       } catch (err) {
-        alert('Could not load sheet data. You may not have access.');
+        console.error('Fetch or rendering error:', err);
+        alert('Could not load sheet data. Check browser console for details.');
       }
     });
 
