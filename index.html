@@ -40,7 +40,9 @@
     let allMarkers = [], currentVoter = null, currentSheetUrl = null;
 
     async function loadSheets() {
+      print("*** loading sheets_url.json");
       const resp = await fetch('sheets_urls.json');
+      print("*** loaded sheets_url.json"); print(resp);
       const urls = await resp.json();
       const select = document.getElementById('sheet-select');
       for (const [label, url] of Object.entries(urls)) {
