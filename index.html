@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Turfs Viewer</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <style>
+    #map { height: 80vh; }
+    #sheet-select { margin: 10px; }
+    #modal {
+      position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+      background: white; padding: 20px; border: 2px solid black; display: none;
+      z-index: 1000; max-width: 90%; box-shadow: 0 0 10px rgba(0,0,0,0.5);
+    }
+    #modal-overlay {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0, 0, 0, 0.5); display: none; z-index: 999;
+    }
+    .modal-field { margin: 5px 0; }
+    button { margin-right: 10px; }
+    .toggle-btn {
+      margin: 5px 5px 10px 0; padding: 5px 10px;
+    }
+    .active-toggle {
+      background-color: #4CAF50; color: white;
+    }
+  </style>
+</head>
+<body>
+  <select id="sheet-select"></select>
+  <div id="map"></div>
+
+  <div id="modal-overlay"></div>
+  <div id="modal">
+    <div id="card-content"></div>
+    <div>
+      <button class="toggle-btn" id="toggle-visited">Visited</button>
+      <button class="toggle-btn" id="toggle-spoke">Spoke To</button>
+      <button class="toggle-btn" id="toggle-help">Will Help</button>
+    </div>
+    <button id="save-btn">Save</button>
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+    const map = L.map('map').setView([42.25, -71.07], 13);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+
+    let allMarkers = [], currentVoter = null, currentSheetUrl = null, markerMap = new Map();
+
+    async function loadSheets() {
+      const resp = await fetch('sheets_urls.json');
+      const urls = await resp.json();
+      const select = document.getElementById('sheet-select');
+      for (const [label, url] of Object.entries(urls)) {
+        const option = document.createElement('option');
+        option.value = url;
+        option.textContent = label;
+        select.appendChild(option);
+      }
+    }
+
+    function showModal(voter) {
+      currentVoter = { ...voter }; // clone to avoid direct mutations
+      const fields = ['Voter_ID','Name','Address','Age','Party','Precinct','Turf','Occupation','Voted_Town','Voted_MBTA','Voted_State','Visited'];
+      const html = fields.map(f => `<div class="modal-field"><b>${f}:</b> ${voter[f] || ''}</div>`).join('');
+      document.getElementById('card-content').innerHTML = html;
+
+      setToggleState('toggle-visited', voter.Visited?.toString().toLowerCase() === 'true');
+      setToggleState('toggle-spoke', voter["Spoke To"]?.toString().toLowerCase() === 'true');
+      setToggleState('toggle-help', voter["Will Help"]?.toString().toLowerCase() === 'true');
+
+      document.getElementById('modal-overlay').style.display = 'block';
+      document.getElementById('modal').style.display = 'block';
+    }
+
+    function setToggleState(id, isActive) {
+      const btn = document.getElementById(id);
+      btn.classList.toggle('active-toggle', isActive);
+    }
+
+    function getToggleState(id) {
+      return document.getElementById(id).classList.contains('active-toggle');
+    }
+
+    document.querySelectorAll('.toggle-btn').forEach(btn => {
+      btn.addEventListener('click', () => btn.classList.toggle('active-toggle'));
+    });
+
+    document.getElementById('save-btn').onclick = async () => {
+      if (!currentVoter) return;
+      currentVoter.Visited = getToggleState('toggle-visited') ? 'TRUE' : 'FALSE';
+      currentVoter["Spoke To"] = getToggleState('toggle-spoke') ? 'TRUE' : 'FALSE';
+      currentVoter["Will Help"] = getToggleState('toggle-help') ? 'TRUE' : 'FALSE';
+
+      try {
+        const res = await fetch(currentSheetUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(currentVoter)
+        });
+        const result = await res.json();
+
+        if (result.status === 'success') {
+          const marker = markerMap.get(currentVoter.Row);
+          if (marker) {
+            const visited = currentVoter.Visited.toLowerCase() === 'true';
+            marker.setIcon(L.icon({
+              iconUrl: visited ? 'https://maps.google.com/mapfiles/ms/icons/green-dot.png'
+                               : 'https://maps.google.com/mapfiles/ms/icons/red-dot.png',
+              iconSize: [32, 32], iconAnchor: [16, 32]
+            }));
+          }
+        } else {
+          alert("Update failed: " + result.message);
+        }
+      } catch (err) {
+        alert("Failed to update sheet: " + err.message);
+      }
+    };
+
+    document.getElementById('sheet-select').addEventListener('change', async (e) => {
+      allMarkers.forEach(m => map.removeLayer(m));
+      allMarkers = []; markerMap.clear();
+
+      const url = e.target.value;
+      currentSheetUrl = url;
+      try {
+        const data = await fetch(url).then(res => res.json());
+        data.forEach(voter => {
+          if (!voter.Latitude || !voter.Longitude) return;
+          const lat = parseFloat(voter.Latitude);
+          const lng = parseFloat(voter.Longitude);
+          const visited = voter.Visited?.toString().toLowerCase() === 'true';
+          const marker = L.marker([lat, lng], {
+            icon: L.icon({
+              iconUrl: visited ? 'https://maps.google.com/mapfiles/ms/icons/green-dot.png'
+                               : 'https://maps.google.com/mapfiles/ms/icons/red-dot.png',
+              iconSize: [32, 32], iconAnchor: [16, 32]
+            })
+          }).addTo(map);
+          marker.on('click', () => showModal(voter));
+          allMarkers.push(marker);
+          markerMap.set(voter.Row, marker);
+        });
+      } catch (err) {
+        alert('Could not load sheet data. You may not have access.');
+      }
+    });
+
+    loadSheets();
+  </script>
+</body>
+</html>
