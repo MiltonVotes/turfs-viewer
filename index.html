@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Turfs Viewer (Debug)</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <style>
+    #map { height: 70vh; margin-bottom: 10px; }
+    #sheet-select { margin: 10px; }
+    #log { white-space: pre-wrap; font-family: monospace; background: #f0f0f0; padding: 10px; max-height: 200px; overflow: auto; }
+  </style>
+</head>
+<body>
+  <select id="sheet-select"><option>Loading...</option></select>
+  <div id="map"></div>
+  <pre id="log">Log output:</pre>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+    const log = msg => {
+      console.log(msg);
+      const logEl = document.getElementById('log');
+      logEl.textContent += `\n${msg}`;
+    };
+
+    const map = L.map('map').setView([42.25, -71.07], 13);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+
+    let allMarkers = [];
+    let currentSheetUrl = null;
+
+    async function loadSheets() {
+      try {
+        log("Fetching sheets_urls.json...");
+        const resp = await fetch('sheets_urls.json');
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        const urls = await resp.json();
+
+        const select = document.getElementById('sheet-select');
+        select.innerHTML = '';
+        for (const [label, url] of Object.entries(urls)) {
+          log(`Loaded: ${label} → ${url}`);
+          const option = document.createElement('option');
+          option.value = url;
+          option.textContent = label;
+          select.appendChild(option);
+        }
+        log("Finished loading sheets.");
+      } catch (err) {
+        log(`Error loading sheets_urls.json: ${err}`);
+        alert("Could not load sheet list. Check console and log below.");
+      }
+    }
+
+    document.getElementById('sheet-select').addEventListener('change', async (e) => {
+      allMarkers.forEach(m => map.removeLayer(m));
+      allMarkers = [];
+
+      const url = e.target.value;
+      currentSheetUrl = url;
+      log(`Fetching voter data from: ${url}`);
+      try {
+        const res = await fetch(url);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        log(`Fetched ${data.length} voters`);
+
+        data.forEach(voter => {
+          if (!voter.Latitude || !voter.Longitude) return;
+          const lat = parseFloat(voter.Latitude);
+          const lng = parseFloat(voter.Longitude);
+          const visited = voter.Visited?.toString().toLowerCase() === 'true';
+          const marker = L.marker([lat, lng], {
+            icon: L.icon({
+              iconUrl: visited ? 'https://maps.google.com/mapfiles/ms/icons/green-dot.png'
+                               : 'https://maps.google.com/mapfiles/ms/icons/red-dot.png',
+              iconSize: [32, 32], iconAnchor: [16, 32]
+            })
+          }).addTo(map);
+          allMarkers.push(marker);
+        });
+        log("Finished placing markers.");
+      } catch (err) {
+        log(`Error fetching voter data: ${err}`);
+        alert("Could not load voter data. Check console and log below.");
+      }
+    });
+
+    loadSheets();
+  </script>
+</body>
+</html>
