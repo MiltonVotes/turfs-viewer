@@ -80,13 +80,12 @@
         option.textContent = label;
         select.appendChild(option);
       }
-    }
 
-    // 🧠 If only one option, auto-trigger change
-    if (select.options.length === 1) {
-      select.dispatchEvent(new Event('change'));
+      // 🧠 If only one option, auto-trigger change
+      if (select.options.length === 1) {
+        select.dispatchEvent(new Event('change'));
+      }
     }
-}
 
     function setToggleState(id, isActive) {
       const btn = document.getElementById(id);
@@ -161,7 +160,7 @@
           }
           hideModal();
           // RDC: adding the following to reload upon save
-//          document.getElementById('sheet-select').dispatchEvent(new Event('change'));
+          document.getElementById('sheet-select').dispatchEvent(new Event('change'));
         } else {
           alert("Update failed: " + result.message);
         }
