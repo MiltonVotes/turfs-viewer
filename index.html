@@ -122,10 +122,18 @@
       log("Payload: " + JSON.stringify(currentVoter));
 
       try {
+        /*
         const res = await fetch(currentSheetUrl, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(currentVoter)
+        });
+        */
+        const formData = new FormData();
+        formData.append("payload", JSON.stringify(currentVoter));
+        const res = await fetch(currentSheetUrl, {
+          method: 'POST',
+          body: formData
         });
 
         log("Response status: " + res.status);
