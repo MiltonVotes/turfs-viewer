@@ -19,7 +19,7 @@
     }
     .modal-field { margin: 5px 0; }
     .toggle-btn {
-      margin: 5px 5px 10px 0; padding: 5px 10px;
+      margin: 5px 0; padding: 5px 10px;
     }
     .active-toggle {
       background-color: #4CAF50; color: white;
@@ -42,8 +42,12 @@
     <div id="card-content"></div>
     <div>
       <button class="toggle-btn" id="toggle-visited">Visited</button>
-      <button class="toggle-btn" id="toggle-spoke">Spoke To</button>
-      <button class="toggle-btn" id="toggle-help">Will Help</button>
+      <button class="toggle-btn" id="toggle-spoke">Spoke</button>
+      <button class="toggle-btn" id="toggle-joined">Joined</button>
+      <div class="modal-field">
+        <label for="phone-input"><b>Phone:</b></label>
+        <input type="text" id="phone-input" />
+      </div>
     </div>
     <div class="modal-buttons">
       <button id="close-btn">Close</button>
@@ -78,6 +82,15 @@
       }
     }
 
+    function setToggleState(id, isActive) {
+      const btn = document.getElementById(id);
+      btn.classList.toggle('active-toggle', isActive);
+    }
+
+    function getToggleState(id) {
+      return document.getElementById(id).classList.contains('active-toggle');
+    }
+
     function showModal(voter) {
       currentVoter = { ...voter };
       const fields = ['Voter_ID','Name','Address','Age','Party','Precinct','Turf','Occupation','Voted_Town','Voted_MBTA','Voted_State','Visited'];
@@ -85,8 +98,10 @@
       document.getElementById('card-content').innerHTML = html;
 
       setToggleState('toggle-visited', voter.Visited?.toString().toLowerCase() === 'true');
-      setToggleState('toggle-spoke', voter["Spoke To"]?.toString().toLowerCase() === 'true');
-      setToggleState('toggle-help', voter["Will Help"]?.toString().toLowerCase() === 'true');
+      setToggleState('toggle-spoke', voter.Spoke?.toString().toLowerCase() === 'true');
+      setToggleState('toggle-joined', voter.Joined?.toString().toLowerCase() === 'true');
+
+      document.getElementById('phone-input').value = voter.Phone || '';
 
       document.getElementById('modal-overlay').style.display = 'block';
       document.getElementById('modal').style.display = 'block';
@@ -95,15 +110,6 @@
     function hideModal() {
       document.getElementById('modal').style.display = 'none';
       document.getElementById('modal-overlay').style.display = 'none';
-    }
-
-    function setToggleState(id, isActive) {
-      const btn = document.getElementById(id);
-      btn.classList.toggle('active-toggle', isActive);
-    }
-
-    function getToggleState(id) {
-      return document.getElementById(id).classList.contains('active-toggle');
     }
 
     document.getElementById('close-btn').onclick = hideModal;
@@ -115,28 +121,14 @@
     document.getElementById('save-btn').onclick = async () => {
       if (!currentVoter) return;
       currentVoter.Visited = getToggleState('toggle-visited') ? 'TRUE' : 'FALSE';
-      currentVoter["Spoke To"] = getToggleState('toggle-spoke') ? 'TRUE' : 'FALSE';
-      currentVoter["Will Help"] = getToggleState('toggle-help') ? 'TRUE' : 'FALSE';
+      currentVoter.Spoke = getToggleState('toggle-spoke') ? 'TRUE' : 'FALSE';
+      currentVoter.Joined = getToggleState('toggle-joined') ? 'TRUE' : 'FALSE';
+      currentVoter.Phone = document.getElementById('phone-input').value;
 
       log("Attempting to POST to: " + currentSheetUrl);
       log("Payload: " + JSON.stringify(currentVoter));
 
       try {
-        /*
-        const res = await fetch(currentSheetUrl, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(currentVoter)
-        });
-        */
-        /*
-        const formData = new FormData();
-        formData.append("payload", JSON.stringify(currentVoter));
-        const res = await fetch(currentSheetUrl, {
-          method: 'POST',
-          body: formData
-        });
-        */
         const res = await fetch(currentSheetUrl, {
           method: 'POST',
           body: JSON.stringify(currentVoter),
@@ -154,9 +146,10 @@
           const marker = markerMap.get(currentVoter.Row);
           if (marker) {
             const visited = currentVoter.Visited.toLowerCase() === 'true';
+            const joined = currentVoter.Joined.toLowerCase() === 'true';
+            const color = !visited ? 'blue' : (joined ? 'green' : 'red');
             marker.setIcon(L.icon({
-              iconUrl: visited ? 'https://maps.google.com/mapfiles/ms/icons/green-dot.png'
-                               : 'https://maps.google.com/mapfiles/ms/icons/red-dot.png',
+              iconUrl: `https://maps.google.com/mapfiles/ms/icons/${color}-dot.png`,
               iconSize: [32, 32], iconAnchor: [16, 32]
             }));
           }
@@ -189,10 +182,12 @@
             return;
           }
           const visited = voter.Visited?.toString().toLowerCase() === 'true';
+          const joined = voter.Joined?.toString().toLowerCase() === 'true';
+          const color = !visited ? 'blue' : (joined ? 'green' : 'red');
+
           const marker = L.marker([lat, lng], {
             icon: L.icon({
-              iconUrl: visited ? 'https://maps.google.com/mapfiles/ms/icons/green-dot.png'
-                               : 'https://maps.google.com/mapfiles/ms/icons/red-dot.png',
+              iconUrl: `https://maps.google.com/mapfiles/ms/icons/${color}-dot.png`,
               iconSize: [32, 32], iconAnchor: [16, 32]
             })
           }).addTo(map);
