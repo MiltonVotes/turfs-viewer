@@ -129,11 +129,21 @@
           body: JSON.stringify(currentVoter)
         });
         */
+        /*
         const formData = new FormData();
         formData.append("payload", JSON.stringify(currentVoter));
         const res = await fetch(currentSheetUrl, {
           method: 'POST',
           body: formData
+        });
+        */
+        const res = await fetch(currentSheetUrl, {
+          method: 'POST',
+          body: JSON.stringify(currentVoter),
+          redirect: 'follow',
+          headers: {
+            'Content-Type': 'text/plain'
+          }
         });
 
         log("Response status: " + res.status);
