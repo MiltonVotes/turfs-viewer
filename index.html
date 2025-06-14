@@ -21,6 +21,7 @@
     .modal-field {
       margin: 5px 0;
       display: flex;
+      align-items: center;
     }
     .modal-field b {
       display: inline-block;
@@ -33,13 +34,9 @@
       padding: 10px 20px;
       font-size: 16px;
     }
-    select {
-      margin: 10px 0;
+    select, input[type="text"] {
       font-size: 14px;
-    }
-    label {
-      display: block;
-      margin-top: 10px;
+      flex: 1;
     }
     #log {
       padding: 10px; background: #f0f0f0; border-top: 1px solid #ccc;
@@ -55,22 +52,31 @@
   <div id="modal">
     <div id="card-content"></div>
 
-    <label for="visit-status">Visit Status:</label>
-    <select id="visit-status">
-      <option value="">-- Select --</option>
-      <option value="Not Visited">Not Visited</option>
-      <option value="No Answer">No Answer</option>
-      <option value="Spoke to Someone">Spoke to Someone</option>
-    </select>
+    <div class="modal-field">
+      <b>Phone:</b>
+      <input type="text" id="phone-input" />
+    </div>
 
-    <label for="support-status">Support Status:</label>
-    <select id="support-status">
-      <option value="">-- Select --</option>
-      <option value="Supports">Supports</option>
-      <option value="Declined">Declined</option>
-      <option value="Unsure">Unsure</option>
-      <option value="Already Involved">Already Involved</option>
-    </select>
+    <div class="modal-field">
+      <b>Visit Status:</b>
+      <select id="visit-status">
+        <option value="">-- Select --</option>
+        <option value="Not Visited">Not Visited</option>
+        <option value="No Answer">No Answer</option>
+        <option value="Spoke to Someone">Spoke to Someone</option>
+      </select>
+    </div>
+
+    <div class="modal-field">
+      <b>Support Status:</b>
+      <select id="support-status">
+        <option value="">-- Select --</option>
+        <option value="Supports">Supports</option>
+        <option value="Declined">Declined</option>
+        <option value="Unsure">Unsure</option>
+        <option value="Already Involved">Already Involved</option>
+      </select>
+    </div>
 
     <div class="modal-buttons">
       <button id="close-btn">Close</button>
@@ -133,6 +139,7 @@
       const html = fields.map(f => `<div class="modal-field"><b>${f}:</b> ${voter[f] || ''}</div>`).join('');
       document.getElementById('card-content').innerHTML = html;
 
+      document.getElementById('phone-input').value = voter.Phone || '';
       document.getElementById('visit-status').value = voter.Visit_Status || '';
       document.getElementById('support-status').value = voter.Support_Status || '';
 
@@ -158,6 +165,7 @@
 
     document.getElementById('save-btn').onclick = async () => {
       if (!currentVoter) return;
+      currentVoter.Phone = document.getElementById('phone-input').value;
       currentVoter.Visit_Status = document.getElementById('visit-status').value;
       currentVoter.Support_Status = document.getElementById('support-status').value;
 
@@ -169,9 +177,7 @@
           method: 'POST',
           body: JSON.stringify(currentVoter),
           redirect: 'follow',
-          headers: {
-            'Content-Type': 'text/plain'
-          }
+          headers: { 'Content-Type': 'text/plain' }
         });
 
         log("Response status: " + res.status);
@@ -181,6 +187,7 @@
         if (result.status === 'success') {
           const marker = markerMap.get(currentVoter.Row);
           if (marker) {
+            Object.assign(marker.voterData, currentVoter);
             const color = getColor(currentVoter.Visit_Status, currentVoter.Support_Status);
             marker.setIcon(L.icon({
               iconUrl: `https://maps.google.com/mapfiles/ms/icons/${color}-dot.png`,
@@ -222,7 +229,8 @@
               iconSize: [32, 32], iconAnchor: [16, 32]
             })
           }).addTo(map);
-          marker.on('click', () => showModal(voter));
+          marker.voterData = voter;
+          marker.on('click', () => showModal(marker.voterData));
           allMarkers.push(marker);
           markerMap.set(voter.Row, marker);
         });
