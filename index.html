@@ -104,15 +104,15 @@
     }
 
     function getColor(visitStatus, supportStatus) {
-      if (visitStatus === 'Not Visited') return 'gray';
-      if (visitStatus === 'No Answer') return 'blue';
+      if (visitStatus === 'Not Visited') return 'blue';
+      if (visitStatus === 'No Answer') return 'brown';
       if (visitStatus === 'Spoke to Someone') {
         switch (supportStatus) {
           case 'Supports': return 'green';
           case 'Declined': return 'red';
           case 'Unsure': return 'orange';
           case 'Already Involved': return 'purple';
-          default: return 'blue';
+          default: return 'gray';
         }
       }
       return 'gray';
