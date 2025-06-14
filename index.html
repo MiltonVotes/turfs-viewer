@@ -74,16 +74,17 @@
   <div id="map"></div>
 
   <!-- Legend -->
-  <details style="margin: 10px 0; font-family: monospace;">
-    <summary><b>Legend</b></summary>
-    <ul style="list-style: none; padding-left: 1em;">
-      <li><img src="https://maps.google.com/mapfiles/ms/icons/blue.png"> Not Visited / No Answer</li>
-      <li><img src="https://maps.google.com/mapfiles/ms/icons/green.png"> Spoke to Someone – Supports</li>
-      <li><img src="https://maps.google.com/mapfiles/ms/icons/red.png"> Spoke to Someone – Declined</li>
-      <li><img src="https://maps.google.com/mapfiles/ms/icons/yellow.png"> Spoke to Someone – Unsure</li>
-      <li><img src="https://maps.google.com/mapfiles/ms/icons/purple.png"> Spoke to Someone – Already Involved</li>
-    </ul>
-  </details>
+  <div id="legend">
+    <details open>
+      <summary><b>Legend</b></summary>
+      <div class="legend-item"><img class="legend-icon" src="https://maps.google.com/mapfiles/ms/icons/blue.png"> Not Visited</div>
+      <div class="legend-item"><img class="legend-icon" src="https://maps.google.com/mapfiles/ms/icons/blue-dot.png"> No Answer</div>
+      <div class="legend-item"><img class="legend-icon" src="https://maps.google.com/mapfiles/ms/icons/green.png"> Supports</div>
+      <div class="legend-item"><img class="legend-icon" src="https://maps.google.com/mapfiles/ms/icons/red.png"> Declined</div>
+      <div class="legend-item"><img class="legend-icon" src="https://maps.google.com/mapfiles/ms/icons/yellow.png"> Unsure</div>
+      <div class="legend-item"><img class="legend-icon" src="https://maps.google.com/mapfiles/ms/icons/purple.png"> Already Involved</div>
+    </details>
+  </div>
 
   <!--
   <div id="legend">
