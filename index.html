@@ -103,16 +103,17 @@
       el.scrollTop = el.scrollHeight;
     }
 
+    // Options: {blue,red,green,ltblue,yellow,purple,pink}{-dot}
     function getColor(visitStatus, supportStatus) {
       if (visitStatus === 'Not Visited') return 'blue';
-      if (visitStatus === 'No Answer') return 'yellow';
+      if (visitStatus === 'No Answer') return 'blue-dot';
       if (visitStatus === 'Spoke to Someone') {
         switch (supportStatus) {
           case 'Supports': return 'green';
           case 'Declined': return 'red';
-          case 'Unsure': return 'orange';
+          case 'Unsure': return 'yellow';
           case 'Already Involved': return 'purple';
-          default: return 'gray';
+          default: return 'blue-dot';
         }
       }
       return 'gray';
@@ -135,7 +136,7 @@
 
     function showModal(voter) {
       currentVoter = { ...voter };
-      const fields = ['Voter_ID','Name','Address','Age','Party','Precinct','Turf','Occupation','Voted_Town','Voted_MBTA','Voted_State'];
+      const fields = ['Name','Address','Age','Party','Voter_ID','Occupation','Precinct','Turf','Voted_Town','Voted_MBTA','Voted_State'];
       const html = fields.map(f => `<div class="modal-field"><b>${f}:</b> ${voter[f] || ''}</div>`).join('');
       document.getElementById('card-content').innerHTML = html;
 
@@ -190,7 +191,8 @@
             Object.assign(marker.voterData, currentVoter);
             const color = getColor(currentVoter.Visit_Status, currentVoter.Support_Status);
             marker.setIcon(L.icon({
-              iconUrl: `https://maps.google.com/mapfiles/ms/icons/${color}-dot.png`,
+//              iconUrl: `https://maps.google.com/mapfiles/ms/icons/${color}-dot.png`,
+              iconUrl: `https://maps.google.com/mapfiles/ms/icons/${color}.png`,
               iconSize: [32, 32], iconAnchor: [16, 32]
             }));
           }
@@ -225,7 +227,8 @@
           const color = getColor(voter.Visit_Status, voter.Support_Status);
           const marker = L.marker([lat, lng], {
             icon: L.icon({
-              iconUrl: `https://maps.google.com/mapfiles/ms/icons/${color}-dot.png`,
+//              iconUrl: `https://maps.google.com/mapfiles/ms/icons/${color}-dot.png`,
+              iconUrl: `https://maps.google.com/mapfiles/ms/icons/${color}.png`,
               iconSize: [32, 32], iconAnchor: [16, 32]
             })
           }).addTo(map);
