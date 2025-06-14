@@ -8,6 +8,7 @@
   <style>
     #map { height: 80vh; }
     #sheet-select { margin: 10px; }
+
     #modal {
       position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
       background: white; padding: 20px; border: 2px solid black; display: none;
@@ -42,11 +43,45 @@
       padding: 10px; background: #f0f0f0; border-top: 1px solid #ccc;
       font-family: monospace; max-height: 20vh; overflow-y: auto;
     }
+
+    /* Legend Styles */
+    #legend {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: white;
+      padding: 10px;
+      border: 1px solid #ccc;
+      font-size: 14px;
+      font-family: Arial, sans-serif;
+      box-shadow: 0 0 5px rgba(0,0,0,0.3);
+      z-index: 1001;
+    }
+    .legend-item {
+      display: flex;
+      align-items: center;
+      margin-bottom: 5px;
+    }
+    .legend-icon {
+      width: 20px;
+      height: 20px;
+      margin-right: 8px;
+    }
   </style>
 </head>
 <body>
   <select id="sheet-select"></select>
   <div id="map"></div>
+
+  <!-- Legend -->
+  <div id="legend">
+    <div class="legend-item"><img class="legend-icon" src="https://maps.google.com/mapfiles/ms/icons/blue.png"> Not Visited</div>
+    <div class="legend-item"><img class="legend-icon" src="https://maps.google.com/mapfiles/ms/icons/blue-dot.png"> No Answer</div>
+    <div class="legend-item"><img class="legend-icon" src="https://maps.google.com/mapfiles/ms/icons/green.png"> Supports</div>
+    <div class="legend-item"><img class="legend-icon" src="https://maps.google.com/mapfiles/ms/icons/red.png"> Declined</div>
+    <div class="legend-item"><img class="legend-icon" src="https://maps.google.com/mapfiles/ms/icons/yellow.png"> Unsure</div>
+    <div class="legend-item"><img class="legend-icon" src="https://maps.google.com/mapfiles/ms/icons/purple.png"> Already Involved</div>
+  </div>
 
   <div id="modal-overlay"></div>
   <div id="modal">
@@ -103,7 +138,6 @@
       el.scrollTop = el.scrollHeight;
     }
 
-    // Options: {blue,red,green,ltblue,yellow,purple,pink}{-dot}
     function getColor(visitStatus, supportStatus) {
       if (visitStatus === 'Not Visited') return 'blue';
       if (visitStatus === 'No Answer') return 'blue-dot';
@@ -116,7 +150,7 @@
           default: return 'blue-dot';
         }
       }
-      return 'blue';
+      return 'gray';
     }
 
     async function loadSheets() {
@@ -191,7 +225,6 @@
             Object.assign(marker.voterData, currentVoter);
             const color = getColor(currentVoter.Visit_Status, currentVoter.Support_Status);
             marker.setIcon(L.icon({
-//              iconUrl: `https://maps.google.com/mapfiles/ms/icons/${color}-dot.png`,
               iconUrl: `https://maps.google.com/mapfiles/ms/icons/${color}.png`,
               iconSize: [32, 32], iconAnchor: [16, 32]
             }));
@@ -227,7 +260,6 @@
           const color = getColor(voter.Visit_Status, voter.Support_Status);
           const marker = L.marker([lat, lng], {
             icon: L.icon({
-//              iconUrl: `https://maps.google.com/mapfiles/ms/icons/${color}-dot.png`,
               iconUrl: `https://maps.google.com/mapfiles/ms/icons/${color}.png`,
               iconSize: [32, 32], iconAnchor: [16, 32]
             })
