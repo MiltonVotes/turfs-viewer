@@ -170,7 +170,7 @@
 
     function showModal(voter) {
       currentVoter = { ...voter };
-      const fields = ['Name','Address','Age','Party','Voter_ID','Occupation','Precinct','Turf','Voted_Town','Voted_MBTA','Voted_State'];
+      const fields = ['Voter_ID','Name','Address','Age','Party','Occupation','Precinct','Turf','Voted_Town','Voted_MBTA','Voted_State'];
       const html = fields.map(f => `<div class="modal-field"><b>${f}:</b> ${voter[f] || ''}</div>`).join('');
       document.getElementById('card-content').innerHTML = html;
 
