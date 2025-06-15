@@ -5,51 +5,17 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" />
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
   <style>
     #map { height: 80vh; }
-    #dropdown-container { margin: 10px; }
     .dropdown-submenu {
       position: relative;
     }
     .dropdown-submenu .dropdown-menu {
       top: 0;
       left: 100%;
-      margin-top: -1px;
-    }
-    #modal {
-      position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
-      background: white; padding: 20px; border: 2px solid black; display: none;
-      z-index: 1000; max-width: 90%; box-shadow: 0 0 10px rgba(0,0,0,0.5);
-      font-family: 'Courier New', monospace;
-    }
-    #modal-overlay {
-      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-      background: rgba(0, 0, 0, 0.5); display: none; z-index: 999;
-    }
-    .modal-field {
-      margin: 5px 0;
-      display: flex;
-      align-items: center;
-    }
-    .modal-field b {
-      display: inline-block;
-      width: 130px;
-    }
-    .modal-buttons {
-      display: flex; justify-content: space-between; margin-top: 10px;
-    }
-    .modal-buttons button {
-      padding: 10px 20px;
-      font-size: 16px;
-    }
-    select, input[type="text"] {
-      font-size: 14px;
-      flex: 1;
-    }
-    #log {
-      padding: 10px; background: #f0f0f0; border-top: 1px solid #ccc;
-      font-family: monospace; max-height: 20vh; overflow-y: auto;
+      margin-left: .1rem;
+      margin-right: .1rem;
     }
     #legend {
       position: absolute;
@@ -76,14 +42,14 @@
   </style>
 </head>
 <body>
-  <div id="dropdown-container" class="dropdown">
-    <button class="btn btn-secondary dropdown-toggle" type="button" id="dropdownMenuButton" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+  <div class="dropdown m-3">
+    <button class="btn btn-primary dropdown-toggle" type="button" id="dropdownMenuButton" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
       Select Sheet
     </button>
-    <div id="dropdown-menu" class="dropdown-menu" aria-labelledby="dropdownMenuButton"></div>
+    <ul class="dropdown-menu" aria-labelledby="dropdownMenuButton" id="sheet-dropdown"></ul>
   </div>
-  <div id="map"></div>
 
+  <div id="map"></div>
   <div id="legend">
     <details open>
       <summary><b>Legend</b></summary>
@@ -96,58 +62,18 @@
     </details>
   </div>
 
-  <div id="modal-overlay"></div>
-  <div id="modal">
-    <div id="card-content"></div>
-    <div class="modal-field">
-      <b>Phone:</b>
-      <input type="text" id="phone-input" />
-    </div>
-    <div class="modal-field">
-      <b>Visit Status:</b>
-      <select id="visit-status">
-        <option value="">-- Select --</option>
-        <option value="Not Visited">Not Visited</option>
-        <option value="No Answer">No Answer</option>
-        <option value="Spoke to Someone">Spoke to Someone</option>
-      </select>
-    </div>
-    <div class="modal-field">
-      <b>Support Status:</b>
-      <select id="support-status">
-        <option value="">-- Select --</option>
-        <option value="Supports">Supports</option>
-        <option value="Declined">Declined</option>
-        <option value="Unsure">Unsure</option>
-        <option value="Already Involved">Already Involved</option>
-      </select>
-    </div>
-    <div class="modal-buttons">
-      <button id="close-btn">Close</button>
-      <button id="save-btn">Save</button>
-    </div>
-  </div>
-
-  <div id="log"></div>
-
-  <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.1/dist/umd/popper.min.js"></script>
-  <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js"></script>
+  <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
   <script>
     const map = L.map('map').setView([42.25, -71.07], 13);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 
-    let allMarkers = [], currentVoter = null, currentSheetUrl = null, markerMap = new Map();
+    let allMarkers = [], markerMap = new Map(), currentSheetUrl = null;
 
     function jitter(coord, amount = 0.0001) {
       return coord + (Math.random() * 2 - 1) * amount;
-    }
-
-    function log(msg) {
-      const el = document.getElementById('log');
-      el.innerText += `\n${msg}`;
-      el.scrollTop = el.scrollHeight;
     }
 
     function getColor(visitStatus, supportStatus) {
@@ -165,58 +91,16 @@
       return 'gray';
     }
 
-    function createMenu(data, parentElem) {
-      for (const [label, value] of Object.entries(data)) {
-        if (typeof value === 'string') {
-          const item = document.createElement('a');
-          item.className = 'dropdown-item';
-          item.href = '#';
-          item.textContent = label;
-          item.onclick = () => loadSheet(value);
-          parentElem.appendChild(item);
-        } else if (typeof value === 'object') {
-          const submenu = document.createElement('div');
-          submenu.className = 'dropdown-submenu';
-
-          const toggle = document.createElement('a');
-          toggle.className = 'dropdown-item dropdown-toggle';
-          toggle.href = '#';
-          toggle.textContent = label;
-
-          const childMenu = document.createElement('div');
-          childMenu.className = 'dropdown-menu';
-
-          submenu.appendChild(toggle);
-          submenu.appendChild(childMenu);
-          parentElem.appendChild(submenu);
-
-          toggle.addEventListener('click', function (e) {
-            e.stopPropagation();
-            e.preventDefault();
-            childMenu.classList.toggle('show');
-          });
-
-          createMenu(value, childMenu);
-        }
-      }
-    }
-
-    async function loadSheets() {
-      const resp = await fetch('sheets_urls.json');
-      const data = await resp.json();
-      const container = document.getElementById('dropdown-menu');
-      container.innerHTML = '';
-      createMenu(data, container);
+    function clearMarkers() {
+      allMarkers.forEach(m => map.removeLayer(m));
+      allMarkers = [];
+      markerMap.clear();
     }
 
     async function loadSheet(url) {
-      allMarkers.forEach(m => map.removeLayer(m));
-      allMarkers = []; markerMap.clear();
-      currentSheetUrl = url;
-
+      clearMarkers();
       try {
-        const data = await fetch(url).then(res => res.json());
-        log(`Fetched ${data.length} voters`);
+        const data = await fetch(url).then(r => r.json());
         data.forEach(voter => {
           if (!voter.Latitude || !voter.Longitude) return;
           const lat = jitter(parseFloat(voter.Latitude));
@@ -229,72 +113,63 @@
             })
           }).addTo(map);
           marker.voterData = voter;
-          marker.on('click', () => showModal(marker.voterData));
           allMarkers.push(marker);
           markerMap.set(voter.Row, marker);
         });
       } catch (err) {
-        alert('Could not load sheet data. You may not have access.');
-        log("Fetch error: " + err);
+        alert('Failed to load sheet: ' + err.message);
       }
     }
 
-    function showModal(voter) {
-      currentVoter = { ...voter };
-      const fields = ['Voter_ID','Name','Address','Age','Party','Occupation','Precinct','Turf','Voted_Town','Voted_MBTA','Voted_State'];
-      const html = fields.map(f => `<div class="modal-field"><b>${f}:</b> ${voter[f] || ''}</div>`).join('');
-      document.getElementById('card-content').innerHTML = html;
-      document.getElementById('phone-input').value = voter.Phone || '';
-      document.getElementById('visit-status').value = voter.Visit_Status || '';
-      document.getElementById('support-status').value = voter.Support_Status || '';
-      updateSupportDropdownState();
-      document.getElementById('modal').style.display = 'block';
-    }
+    async function populateMenu() {
+      const resp = await fetch('sheets_urls.json');
+      const data = await resp.json();
+      const dropdown = document.getElementById('sheet-dropdown');
+      dropdown.innerHTML = '';
 
-    function updateSupportDropdownState() {
-      const visitStatus = document.getElementById('visit-status').value;
-      document.getElementById('support-status').disabled = (visitStatus !== 'Spoke to Someone');
-    }
-
-    function hideModal() {
-      document.getElementById('modal').style.display = 'none';
-    }
-
-    document.getElementById('visit-status').addEventListener('change', updateSupportDropdownState);
-    document.getElementById('close-btn').onclick = hideModal;
-    document.getElementById('save-btn').onclick = async () => {
-      if (!currentVoter) return;
-      currentVoter.Phone = document.getElementById('phone-input').value;
-      currentVoter.Visit_Status = document.getElementById('visit-status').value;
-      currentVoter.Support_Status = document.getElementById('support-status').value;
-
-      try {
-        const res = await fetch(currentSheetUrl, {
-          method: 'POST',
-          body: JSON.stringify(currentVoter),
-          headers: { 'Content-Type': 'text/plain' }
-        });
-        const result = await res.json();
-        if (result.status === 'success') {
-          const marker = markerMap.get(currentVoter.Row);
-          if (marker) {
-            Object.assign(marker.voterData, currentVoter);
-            const color = getColor(currentVoter.Visit_Status, currentVoter.Support_Status);
-            marker.setIcon(L.icon({
-              iconUrl: `https://maps.google.com/mapfiles/ms/icons/${color}.png`,
-              iconSize: [32, 32], iconAnchor: [16, 32]
-            }));
-          }
-          hideModal();
+      for (const [label, value] of Object.entries(data)) {
+        if (typeof value === 'string') {
+          const item = document.createElement('a');
+          item.className = 'dropdown-item';
+          item.href = '#';
+          item.textContent = label;
+          item.onclick = () => loadSheet(value);
+          dropdown.appendChild(item);
         } else {
-          alert("Update failed: " + result.message);
-        }
-      } catch (err) {
-        alert("Failed to update sheet: " + err.message);
-      }
-    };
+          const li = document.createElement('li');
+          li.className = 'dropdown-submenu';
+          const a = document.createElement('a');
+          a.className = 'dropdown-item dropdown-toggle';
+          a.href = '#';
+          a.textContent = label;
 
-    loadSheets();
+          const submenu = document.createElement('ul');
+          submenu.className = 'dropdown-menu';
+          for (const [sublabel, url] of Object.entries(value)) {
+            const subItem = document.createElement('a');
+            subItem.className = 'dropdown-item';
+            subItem.href = '#';
+            subItem.textContent = sublabel;
+            subItem.onclick = () => loadSheet(url);
+            submenu.appendChild(subItem);
+          }
+          li.appendChild(a);
+          li.appendChild(submenu);
+          dropdown.appendChild(li);
+        }
+      }
+    }
+
+    $(document).ready(() => {
+      $('.dropdown-submenu a.dropdown-toggle').on("click", function(e) {
+        e.preventDefault();
+        $(this).next('ul').toggle();
+        $('.dropdown-submenu ul').not($(this).next()).hide();
+        return false;
+      });
+    });
+
+    populateMenu();
   </script>
 </body>
 </html>
