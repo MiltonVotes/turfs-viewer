@@ -5,75 +5,60 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
   <style>
-    #map { height: 80vh; }
-    #sheet-select { margin: 10px; }
-
+    #map { height: 80vh; margin-top: 10px; }
+    .dropdown-menu li { position: relative; }
+    .dropdown-submenu {
+      display: none;
+      position: absolute;
+      left: 100%;
+      top: 0;
+      margin-top: -1px;
+    }
+    .dropdown-menu > li:hover > .dropdown-submenu {
+      display: block;
+    }
+    .dropdown-menu > li > a {
+      cursor: pointer;
+    }
     #modal {
       position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
       background: white; padding: 20px; border: 2px solid black; display: none;
       z-index: 1000; max-width: 90%; box-shadow: 0 0 10px rgba(0,0,0,0.5);
       font-family: 'Courier New', monospace;
     }
-    #modal-overlay {
-      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-      background: rgba(0, 0, 0, 0.5); display: none; z-index: 999;
-    }
     .modal-field {
-      margin: 5px 0;
-      display: flex;
-      align-items: center;
+      margin: 5px 0; display: flex; align-items: center;
     }
-    .modal-field b {
-      display: inline-block;
-      width: 130px;
-    }
-    .modal-buttons {
-      display: flex; justify-content: space-between; margin-top: 10px;
-    }
-    .modal-buttons button {
-      padding: 10px 20px;
-      font-size: 16px;
-    }
-    select, input[type="text"] {
-      font-size: 14px;
-      flex: 1;
-    }
+    .modal-field b { width: 130px; }
+    .modal-buttons { display: flex; justify-content: space-between; margin-top: 10px; }
+    select, input[type="text"] { flex: 1; font-size: 14px; }
     #log {
       padding: 10px; background: #f0f0f0; border-top: 1px solid #ccc;
       font-family: monospace; max-height: 20vh; overflow-y: auto;
     }
-
-    /* Legend Styles */
     #legend {
-      position: absolute;
-      top: 10px;
-      right: 10px;
-      background: white;
-      padding: 10px;
-      border: 1px solid #ccc;
-      font-size: 14px;
-      font-family: Arial, sans-serif;
-      box-shadow: 0 0 5px rgba(0,0,0,0.3);
+      position: absolute; top: 10px; right: 10px; background: white;
+      padding: 10px; border: 1px solid #ccc; font-size: 14px;
+      font-family: Arial, sans-serif; box-shadow: 0 0 5px rgba(0,0,0,0.3);
       z-index: 1001;
     }
-    .legend-item {
-      display: flex;
-      align-items: center;
-      margin-bottom: 5px;
-    }
-    .legend-icon {
-      width: 20px;
-      height: 20px;
-      margin-right: 8px;
-    }
+    .legend-item { display: flex; align-items: center; margin-bottom: 5px; }
+    .legend-icon { width: 20px; height: 20px; margin-right: 8px; }
   </style>
 </head>
 <body>
-  <select id="sheet-select"></select>
-  <div id="map"></div>
+  <div class="dropdown ml-2 mt-2">
+    <button class="btn btn-primary dropdown-toggle" type="button" id="menuDropdown" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+      Select Sheet
+    </button>
+    <ul class="dropdown-menu" id="nested-menu"></ul>
+  </div>
 
-  <!-- Legend -->
+  <div id="map"></div>
   <div id="legend">
     <details open>
       <summary><b>Legend</b></summary>
@@ -86,15 +71,11 @@
     </details>
   </div>
 
-  <div id="modal-overlay"></div>
   <div id="modal">
     <div id="card-content"></div>
-
     <div class="modal-field">
-      <b>Phone:</b>
-      <input type="text" id="phone-input" />
+      <b>Phone:</b><input type="text" id="phone-input" />
     </div>
-
     <div class="modal-field">
       <b>Visit Status:</b>
       <select id="visit-status">
@@ -104,7 +85,6 @@
         <option value="Spoke to Someone">Spoke to Someone</option>
       </select>
     </div>
-
     <div class="modal-field">
       <b>Support Status:</b>
       <select id="support-status">
@@ -115,32 +95,27 @@
         <option value="Already Involved">Already Involved</option>
       </select>
     </div>
-
     <div class="modal-buttons">
       <button id="close-btn">Close</button>
       <button id="save-btn">Save</button>
     </div>
   </div>
-
   <div id="log"></div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
     const map = L.map('map').setView([42.25, -71.07], 13);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+    let allMarkers = [], currentVoter = null, currentSheetUrl = null, markerMap = new Map();
 
     function jitter(coord, amount = 0.0001) {
       return coord + (Math.random() * 2 - 1) * amount;
     }
-
-    let allMarkers = [], currentVoter = null, currentSheetUrl = null, markerMap = new Map();
-
     function log(msg) {
       const el = document.getElementById('log');
       el.innerText += `\n${msg}`;
       el.scrollTop = el.scrollHeight;
     }
-
     function getColor(visitStatus, supportStatus) {
       if (visitStatus === 'Not Visited') return 'blue';
       if (visitStatus === 'No Answer') return 'blue-dot';
@@ -156,72 +131,95 @@
       return 'gray';
     }
 
-    async function loadSheets() {
-      const resp = await fetch('sheets_urls.json');
-      const urls = await resp.json();
-      const select = document.getElementById('sheet-select');
-      for (const [label, url] of Object.entries(urls)) {
-        const option = document.createElement('option');
-        option.value = url;
-        option.textContent = label;
-        select.appendChild(option);
+    function buildMenu(data) {
+      const menu = document.getElementById('nested-menu');
+      menu.innerHTML = '';
+      for (const key in data) {
+        const value = data[key];
+        const li = document.createElement('li');
+        if (typeof value === 'string') {
+          li.innerHTML = `<a class='dropdown-item' onclick="loadSheet('${value}')">${key}</a>`;
+        } else {
+          li.innerHTML = `<a class='dropdown-item dropdown-toggle'>${key}</a>`;
+          const subMenu = document.createElement('ul');
+          subMenu.className = 'dropdown-submenu dropdown-menu';
+          for (const subKey in value) {
+            const subUrl = value[subKey];
+            const subLi = document.createElement('li');
+            subLi.innerHTML = `<a class='dropdown-item' onclick="loadSheet('${subUrl}')">${subKey}</a>`;
+            subMenu.appendChild(subLi);
+          }
+          li.appendChild(subMenu);
+        }
+        menu.appendChild(li);
       }
-      if (select.options.length === 1) {
-        select.dispatchEvent(new Event('change'));
+    }
+
+    async function loadSheet(url) {
+      allMarkers.forEach(m => map.removeLayer(m));
+      allMarkers = []; markerMap.clear();
+      currentSheetUrl = url;
+      log("Fetching sheet data from: " + url);
+      try {
+        const data = await fetch(url).then(res => res.json());
+        log(`Fetched ${data.length} voters`);
+        data.forEach(voter => {
+          if (!voter.Latitude || !voter.Longitude) return;
+          const lat = jitter(parseFloat(voter.Latitude));
+          const lng = jitter(parseFloat(voter.Longitude));
+          if (isNaN(lat) || isNaN(lng)) return;
+          const color = getColor(voter.Visit_Status, voter.Support_Status);
+          const marker = L.marker([lat, lng], {
+            icon: L.icon({ iconUrl: `https://maps.google.com/mapfiles/ms/icons/${color}.png`, iconSize: [32, 32], iconAnchor: [16, 32] })
+          }).addTo(map);
+          marker.voterData = voter;
+          marker.on('click', () => showModal(marker.voterData));
+          allMarkers.push(marker);
+          markerMap.set(voter.Row, marker);
+        });
+        log("Finished placing markers");
+      } catch (err) {
+        alert('Could not load sheet data. You may not have access.');
+        log("Fetch error: " + err);
       }
     }
 
     function showModal(voter) {
       currentVoter = { ...voter };
       const fields = ['Voter_ID','Name','Address','Age','Party','Occupation','Precinct','Turf','Voted_Town','Voted_MBTA','Voted_State'];
-      const html = fields.map(f => `<div class="modal-field"><b>${f}:</b> ${voter[f] || ''}</div>`).join('');
+      const html = fields.map(f => `<div class='modal-field'><b>${f}:</b> ${voter[f] || ''}</div>`).join('');
       document.getElementById('card-content').innerHTML = html;
-
       document.getElementById('phone-input').value = voter.Phone || '';
       document.getElementById('visit-status').value = voter.Visit_Status || '';
       document.getElementById('support-status').value = voter.Support_Status || '';
-
       updateSupportDropdownState();
-
-//      document.getElementById('modal-overlay').style.display = 'block';
       document.getElementById('modal').style.display = 'block';
     }
-
+    function hideModal() {
+      document.getElementById('modal').style.display = 'none';
+    }
     function updateSupportDropdownState() {
       const visitStatus = document.getElementById('visit-status').value;
       const supportDropdown = document.getElementById('support-status');
       supportDropdown.disabled = (visitStatus !== 'Spoke to Someone');
     }
 
-    function hideModal() {
-      document.getElementById('modal').style.display = 'none';
-      document.getElementById('modal-overlay').style.display = 'none';
-    }
-
     document.getElementById('visit-status').addEventListener('change', updateSupportDropdownState);
     document.getElementById('close-btn').onclick = hideModal;
-
     document.getElementById('save-btn').onclick = async () => {
       if (!currentVoter) return;
       currentVoter.Phone = document.getElementById('phone-input').value;
       currentVoter.Visit_Status = document.getElementById('visit-status').value;
       currentVoter.Support_Status = document.getElementById('support-status').value;
-
       log("Attempting to POST to: " + currentSheetUrl);
       log("Payload: " + JSON.stringify(currentVoter));
-
       try {
         const res = await fetch(currentSheetUrl, {
-          method: 'POST',
-          body: JSON.stringify(currentVoter),
-          redirect: 'follow',
-          headers: { 'Content-Type': 'text/plain' }
+          method: 'POST', body: JSON.stringify(currentVoter), redirect: 'follow', headers: { 'Content-Type': 'text/plain' }
         });
-
         log("Response status: " + res.status);
         const result = await res.json();
         log("Result: " + JSON.stringify(result));
-
         if (result.status === 'success') {
           const marker = markerMap.get(currentVoter.Row);
           if (marker) {
@@ -242,44 +240,13 @@
       }
     };
 
-    document.getElementById('sheet-select').addEventListener('change', async (e) => {
-      allMarkers.forEach(m => map.removeLayer(m));
-      allMarkers = []; markerMap.clear();
+    async function init() {
+      const resp = await fetch('sheets_urls.json');
+      const data = await resp.json();
+      buildMenu(data);
+    }
 
-      const url = e.target.value;
-      currentSheetUrl = url;
-      log("Fetching sheet data from: " + url);
-      try {
-        const data = await fetch(url).then(res => res.json());
-        log(`Fetched ${data.length} voters`);
-        data.forEach(voter => {
-          if (!voter.Latitude || !voter.Longitude) return;
-          const lat = jitter(parseFloat(voter.Latitude));
-          const lng = jitter(parseFloat(voter.Longitude));
-          if (isNaN(lat) || isNaN(lng)) {
-            log("Skipping invalid lat/lng: " + voter.Latitude + ", " + voter.Longitude);
-            return;
-          }
-          const color = getColor(voter.Visit_Status, voter.Support_Status);
-          const marker = L.marker([lat, lng], {
-            icon: L.icon({
-              iconUrl: `https://maps.google.com/mapfiles/ms/icons/${color}.png`,
-              iconSize: [32, 32], iconAnchor: [16, 32]
-            })
-          }).addTo(map);
-          marker.voterData = voter;
-          marker.on('click', () => showModal(marker.voterData));
-          allMarkers.push(marker);
-          markerMap.set(voter.Row, marker);
-        });
-        log("Finished placing markers");
-      } catch (err) {
-        alert('Could not load sheet data. You may not have access.');
-        log("Fetch error: " + err);
-      }
-    });
-
-    loadSheets();
+    init();
   </script>
 </body>
 </html>
