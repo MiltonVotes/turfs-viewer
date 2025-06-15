@@ -1,0 +1,38 @@
+{
+  "Republicans" : "https://script.google.com/macros/s/AKfycbz9SW2UbIIYb5Nk75APuar75ISyZFIeo4ec53_LzlOueUTa6zOBejjNp9iFKkvBZcyItA/exec",
+  "Precinct 1" : {
+    "All"    : "https://script.google.com/macros/s/AKfycbx0XQ0rijh9pb_0Osu1KegJAv5m9pZ6XJiZp3QWgMfhYYvX2YrvyqNFbcH-Fi0K78RD/exec",
+    "Turf 1" : "https://script.google.com/macros/s/AKfycbx0XQ0rijh9pb_0Osu1KegJAv5m9pZ6XJiZp3QWgMfhYYvX2YrvyqNFbcH-Fi0K78RD/exec",
+    "Turf 2" : "https://script.google.com/macros/s/AKfycbx0XQ0rijh9pb_0Osu1KegJAv5m9pZ6XJiZp3QWgMfhYYvX2YrvyqNFbcH-Fi0K78RD/exec"
+  },
+  "Precinct 2" : {
+    "All" : "https://script.google.com/macros/s/AKfycbxcqEXj1QSahoal8C4RqtIjQarXScvYQcZLaKpIJCp0T0ekFn00upSArBgDT-0l1LDw/exec"
+  },
+  "Precinct 3" : {
+    "All" : "https://script.google.com/macros/s/AKfycbz4oQrHkwjaUsKdnVX1eVvyMkKqbNYj-aVe3n5qLdiBL5XNgDFFtxdEENJcmuM02J1wZA/exec"
+  },
+  "Precinct 4" : {
+    "All" : "https://script.google.com/macros/s/AKfycbyqVZ3TiaUUMd4Y1v5zhYW7-nmrB-XG85AW-fpSdkfaftMz_VfmHKShC-XH3aj1hnSW/exec"
+  },
+  "Precinct 4A" : {
+    "All" : "https://script.google.com/macros/s/AKfycbxejMzI86g_gE2ae5cySTuxndUrVXo2w4VI3Ax6bvYuH3JRtMzc0Mfc_6KVtDR1dnwU2A/exec"
+  },
+  "Precinct 5" : {
+    "All" : "https://script.google.com/macros/s/AKfycbzE5LDxyjWkgzcC0rBDtMONVmCRjG-_tahwrkokFHWht9ZAdGOqut_bVknhYb5kQTG2/exec"
+  },
+  "Precinct 6" : {
+    "All" : "https://script.google.com/macros/s/AKfycbzJplHHQxfwvShTJNqygQpK9SdnXu01xfeXL-0l83eytuPDyuP0jVCePsl4ctFF2Nxd/exec"
+  },
+  "Precinct 7" : {
+    "All" : "https://script.google.com/macros/s/AKfycbwArOIMg3oEPW-EuZ6pOOEN387EXc1zBQT1VYqb2cUTGneqHkEXCkfIBrIEinEQ-Hp9/exec"
+  },
+  "Precinct 8" : {
+    "All" : "https://script.google.com/macros/s/AKfycby9XQuXaQspPSbZoi9EUFpOTqpXrFQexoRO_dC28LCnZHJ_uXQuCvhguOKQPuR2rK2OLg/exec"
+  },
+  "Precinct 9" : {
+    "All" : "https://script.google.com/macros/s/AKfycbzurmOE4ttzn8GoQxd_GUHniUPw9Rd6QG8-UXlL9bcFw3wLqHzaF-6jemWWYeH7mrwL/exec"
+  },
+  "Precinct 10" : {
+    "All" : "https://script.google.com/macros/s/AKfycbygHSYbASMOQZHmxu-rLoPBKZt9GzE6T1YC-kisRrRUIDL_cqk0Py-X7RmE79JIfjCu/exec"
+  }
+}
