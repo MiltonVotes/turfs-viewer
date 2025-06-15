@@ -163,28 +163,36 @@
 
       const categorySelect = document.getElementById('category-select');
       categorySelect.innerHTML = '';
-      for (const category of Object.keys(data)) {
+      for (const [label, value] of Object.entries(data)) {
         const option = document.createElement('option');
-        option.value = category;
-        option.textContent = category;
+        option.value = label;
+        option.textContent = label;
         categorySelect.appendChild(option);
       }
       categorySelect.dispatchEvent(new Event('change'));
     }
 
     document.getElementById('category-select').addEventListener('change', e => {
-      const selectedCategory = e.target.value;
-      const sheets = sheetDataByCategory[selectedCategory];
+      const selected = e.target.value;
+      const sub = sheetDataByCategory[selected];
       const sheetSelect = document.getElementById('sheet-select');
       sheetSelect.innerHTML = '';
 
-      for (const [label, url] of Object.entries(sheets)) {
+      if (typeof sub === 'string') {
         const option = document.createElement('option');
-        option.value = url;
-        option.textContent = label;
+        option.value = sub;
+        option.textContent = selected;
         sheetSelect.appendChild(option);
+        sheetSelect.dispatchEvent(new Event('change'));
+      } else {
+        for (const [label, url] of Object.entries(sub)) {
+          const option = document.createElement('option');
+          option.value = url;
+          option.textContent = label;
+          sheetSelect.appendChild(option);
+        }
+        sheetSelect.dispatchEvent(new Event('change'));
       }
-      sheetSelect.dispatchEvent(new Event('change'));
     });
 
     document.getElementById('sheet-select').addEventListener('change', async (e) => {
