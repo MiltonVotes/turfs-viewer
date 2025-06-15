@@ -72,6 +72,14 @@
     table { border-collapse: collapse; width: 100%; }
     th, td { border: 1px solid #ccc; padding: 5px; font-family: monospace; font-size: 13px; }
     tr:hover { background-color: #f0f0f0; cursor: pointer; }
+
+    .row-blue { background-color: #e6f0ff; }
+    .row-blue-dot { background-color: #d0e0ff; }
+    .row-green { background-color: #e0ffe0; }
+    .row-red { background-color: #ffe0e0; }
+    .row-yellow { background-color: #fff9cc; }
+    .row-purple { background-color: #f2e6ff; }
+    .row-gray { background-color: #eeeeee; }
   </style>
 </head>
 <body>
@@ -188,8 +196,7 @@
 
     function updateSupportDropdownState() {
       const visitStatus = document.getElementById('visit-status').value;
-      const supportDropdown = document.getElementById('support-status');
-      supportDropdown.disabled = (visitStatus !== 'Spoke to Someone');
+      document.getElementById('support-status').disabled = (visitStatus !== 'Spoke to Someone');
     }
 
     function hideModal() {
@@ -218,9 +225,6 @@
         });
 
         const result = await res.json();
-        log("Response status: " + res.status);
-        log("Result: " + JSON.stringify(result));
-
         if (result.status === 'success') {
           const marker = markerMap.get(currentVoter.Row);
           if (marker) {
@@ -231,6 +235,16 @@
               iconSize: [32, 32], iconAnchor: [16, 32]
             }));
           }
+
+          // Update row color
+          document.querySelectorAll('#data-table tr').forEach(row => {
+            const cells = row.getElementsByTagName('td');
+            if (cells.length && cells[0].textContent === currentVoter.Voter_ID) {
+              row.className = '';
+              row.classList.add(`row-${getColor(currentVoter.Visit_Status, currentVoter.Support_Status)}`);
+            }
+          });
+
           hideModal();
         } else {
           alert("Update failed: " + result.message);
@@ -251,7 +265,6 @@
         const data = await fetch(url).then(res => res.json());
         currentData = data;
         log(`Fetched ${data.length} voters`);
-
         const table = document.getElementById('data-table');
         table.innerHTML = '';
         const header = document.createElement('tr');
@@ -265,6 +278,8 @@
 
         data.forEach(voter => {
           const row = document.createElement('tr');
+          const color = getColor(voter.Visit_Status, voter.Support_Status);
+          row.classList.add(`row-${color}`);
           row.onclick = () => showModal(voter);
           keys.forEach(k => {
             const td = document.createElement('td');
@@ -277,7 +292,6 @@
           const lat = jitter(parseFloat(voter.Latitude));
           const lng = jitter(parseFloat(voter.Longitude));
           if (isNaN(lat) || isNaN(lng)) return;
-          const color = getColor(voter.Visit_Status, voter.Support_Status);
           const marker = L.marker([lat, lng], {
             icon: L.icon({
               iconUrl: `https://maps.google.com/mapfiles/ms/icons/${color}.png`,
