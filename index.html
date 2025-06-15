@@ -6,34 +6,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <style>
-    #mode-toggle {
-      margin: 10px;
-    }
-    #sheet-select {
-      margin: 10px;
-    }
-    #map, #table-container {
-      height: 70vh;
-      display: none;
-    }
-    #map.active, #table-container.active {
-      display: block;
-    }
-
-    #data-table {
-      width: 100%;
-      border-collapse: collapse;
-      font-family: Arial, sans-serif;
-    }
-    #data-table th, #data-table td {
-      border: 1px solid #ccc;
-      padding: 4px 8px;
-      font-size: 12px;
-    }
-    #data-table tr:hover {
-      background-color: #f2f2f2;
-      cursor: pointer;
-    }
+    #map { height: 80vh; }
+    #sheet-select, #view-toggle { margin: 10px; }
 
     #modal {
       position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
@@ -65,15 +39,9 @@
       font-size: 14px;
       flex: 1;
     }
-
     #log {
-      padding: 5px 10px;
-      background: #f0f0f0;
-      border-top: 1px solid #ccc;
-      font-family: monospace;
-      max-height: 3em;
-      overflow-y: auto;
-      font-size: 12px;
+      padding: 10px; background: #f0f0f0; border-top: 1px solid #ccc;
+      font-family: monospace; max-height: 20vh; overflow-y: auto;
     }
 
     /* Legend Styles */
@@ -99,14 +67,18 @@
       height: 20px;
       margin-right: 8px;
     }
+
+    #table-view { display: none; margin: 10px; overflow-x: auto; }
+    table { border-collapse: collapse; width: 100%; }
+    th, td { border: 1px solid #ccc; padding: 5px; font-family: monospace; font-size: 13px; }
+    tr:hover { background-color: #f0f0f0; cursor: pointer; }
   </style>
 </head>
 <body>
-  <button id="mode-toggle">Switch to Rows View</button>
   <select id="sheet-select"></select>
-
-  <div id="map" class="active"></div>
-  <div id="table-container"><table id="data-table"></table></div>
+  <button id="view-toggle">View: Map</button>
+  <div id="map"></div>
+  <div id="table-view"><table id="data-table"></table></div>
 
   <!-- Legend -->
   <div id="legend">
@@ -124,12 +96,10 @@
   <div id="modal-overlay"></div>
   <div id="modal">
     <div id="card-content"></div>
-
     <div class="modal-field">
       <b>Phone:</b>
       <input type="text" id="phone-input" />
     </div>
-
     <div class="modal-field">
       <b>Visit Status:</b>
       <select id="visit-status">
@@ -139,7 +109,6 @@
         <option value="Spoke to Someone">Spoke to Someone</option>
       </select>
     </div>
-
     <div class="modal-field">
       <b>Support Status:</b>
       <select id="support-status">
@@ -150,7 +119,6 @@
         <option value="Already Involved">Already Involved</option>
       </select>
     </div>
-
     <div class="modal-buttons">
       <button id="close-btn">Close</button>
       <button id="save-btn">Save</button>
@@ -191,16 +159,29 @@
       return 'gray';
     }
 
+    async function loadSheets() {
+      const resp = await fetch('sheets_urls.json');
+      const urls = await resp.json();
+      const select = document.getElementById('sheet-select');
+      for (const [label, url] of Object.entries(urls)) {
+        const option = document.createElement('option');
+        option.value = url;
+        option.textContent = label;
+        select.appendChild(option);
+      }
+      if (select.options.length === 1) {
+        select.dispatchEvent(new Event('change'));
+      }
+    }
+
     function showModal(voter) {
       currentVoter = { ...voter };
       const fields = ['Voter_ID','Name','Address','Age','Party','Occupation','Precinct','Turf','Voted_Town','Voted_MBTA','Voted_State'];
       const html = fields.map(f => `<div class="modal-field"><b>${f}:</b> ${voter[f] || ''}</div>`).join('');
       document.getElementById('card-content').innerHTML = html;
-
       document.getElementById('phone-input').value = voter.Phone || '';
       document.getElementById('visit-status').value = voter.Visit_Status || '';
       document.getElementById('support-status').value = voter.Support_Status || '';
-
       updateSupportDropdownState();
       document.getElementById('modal').style.display = 'block';
     }
@@ -236,8 +217,8 @@
           headers: { 'Content-Type': 'text/plain' }
         });
 
-        log("Response status: " + res.status);
         const result = await res.json();
+        log("Response status: " + res.status);
         log("Result: " + JSON.stringify(result));
 
         if (result.status === 'success') {
@@ -260,36 +241,9 @@
       }
     };
 
-    function populateTable(data) {
-      const table = document.getElementById('data-table');
-      table.innerHTML = '';
-
-      if (data.length === 0) return;
-
-      const header = document.createElement('tr');
-      Object.keys(data[0]).forEach(key => {
-        const th = document.createElement('th');
-        th.textContent = key;
-        header.appendChild(th);
-      });
-      table.appendChild(header);
-
-      data.forEach(voter => {
-        const row = document.createElement('tr');
-        Object.values(voter).forEach(val => {
-          const td = document.createElement('td');
-          td.textContent = val || '';
-          row.appendChild(td);
-        });
-        row.onclick = () => showModal(voter);
-        table.appendChild(row);
-      });
-    }
-
     document.getElementById('sheet-select').addEventListener('change', async (e) => {
       allMarkers.forEach(m => map.removeLayer(m));
       allMarkers = []; markerMap.clear();
-
       const url = e.target.value;
       currentSheetUrl = url;
       log("Fetching sheet data from: " + url);
@@ -298,14 +252,31 @@
         currentData = data;
         log(`Fetched ${data.length} voters`);
 
+        const table = document.getElementById('data-table');
+        table.innerHTML = '';
+        const header = document.createElement('tr');
+        const keys = ['Voter_ID','Name','Address','Age','Party','Occupation','Precinct','Turf','Voted_Town','Voted_MBTA','Voted_State'];
+        keys.forEach(k => {
+          const th = document.createElement('th');
+          th.textContent = k;
+          header.appendChild(th);
+        });
+        table.appendChild(header);
+
         data.forEach(voter => {
+          const row = document.createElement('tr');
+          row.onclick = () => showModal(voter);
+          keys.forEach(k => {
+            const td = document.createElement('td');
+            td.textContent = voter[k] || '';
+            row.appendChild(td);
+          });
+          table.appendChild(row);
+
           if (!voter.Latitude || !voter.Longitude) return;
           const lat = jitter(parseFloat(voter.Latitude));
           const lng = jitter(parseFloat(voter.Longitude));
-          if (isNaN(lat) || isNaN(lng)) {
-            log("Skipping invalid lat/lng: " + voter.Latitude + ", " + voter.Longitude);
-            return;
-          }
+          if (isNaN(lat) || isNaN(lng)) return;
           const color = getColor(voter.Visit_Status, voter.Support_Status);
           const marker = L.marker([lat, lng], {
             icon: L.icon({
@@ -318,7 +289,6 @@
           allMarkers.push(marker);
           markerMap.set(voter.Row, marker);
         });
-        populateTable(data);
         log("Finished placing markers");
       } catch (err) {
         alert('Could not load sheet data. You may not have access.');
@@ -326,36 +296,20 @@
       }
     });
 
-    document.getElementById('mode-toggle').addEventListener('click', () => {
+    document.getElementById('view-toggle').onclick = () => {
       const mapDiv = document.getElementById('map');
-      const tableDiv = document.getElementById('table-container');
-      const toggleBtn = document.getElementById('mode-toggle');
-
-      if (mapDiv.classList.contains('active')) {
-        mapDiv.classList.remove('active');
-        tableDiv.classList.add('active');
-        toggleBtn.textContent = 'Switch to Map View';
+      const tableDiv = document.getElementById('table-view');
+      const btn = document.getElementById('view-toggle');
+      if (mapDiv.style.display === 'none') {
+        mapDiv.style.display = 'block';
+        tableDiv.style.display = 'none';
+        btn.textContent = 'View: Map';
       } else {
-        tableDiv.classList.remove('active');
-        mapDiv.classList.add('active');
-        toggleBtn.textContent = 'Switch to Rows View';
+        mapDiv.style.display = 'none';
+        tableDiv.style.display = 'block';
+        btn.textContent = 'View: Rows';
       }
-    });
-
-    async function loadSheets() {
-      const resp = await fetch('sheets_urls.json');
-      const urls = await resp.json();
-      const select = document.getElementById('sheet-select');
-      for (const [label, url] of Object.entries(urls)) {
-        const option = document.createElement('option');
-        option.value = url;
-        option.textContent = label;
-        select.appendChild(option);
-      }
-      if (select.options.length === 1) {
-        select.dispatchEvent(new Event('change'));
-      }
-    }
+    };
 
     loadSheets();
   </script>
