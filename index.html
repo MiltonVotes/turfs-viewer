@@ -109,6 +109,10 @@
       <input type="text" id="phone-input" />
     </div>
     <div class="modal-field">
+      <b>Email:</b>
+      <input type="text" id="email-input" />
+    </div>
+    <div class="modal-field">
       <b>Visit Status:</b>
       <select id="visit-status">
         <option value="">-- Select --</option>
@@ -188,6 +192,7 @@
       const html = fields.map(f => `<div class="modal-field"><b>${f}:</b> ${voter[f] || ''}</div>`).join('');
       document.getElementById('card-content').innerHTML = html;
       document.getElementById('phone-input').value = voter.Phone || '';
+      document.getElementById('email-input').value = voter.Email || '';
       document.getElementById('visit-status').value = voter.Visit_Status || '';
       document.getElementById('support-status').value = voter.Support_Status || '';
       updateSupportDropdownState();
@@ -210,6 +215,7 @@
     document.getElementById('save-btn').onclick = async () => {
       if (!currentVoter) return;
       currentVoter.Phone = document.getElementById('phone-input').value;
+      currentVoter.Email = document.getElementById('email-input').value;
       currentVoter.Visit_Status = document.getElementById('visit-status').value;
       currentVoter.Support_Status = document.getElementById('support-status').value;
 
