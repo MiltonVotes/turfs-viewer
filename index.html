@@ -274,7 +274,7 @@
         const table = document.getElementById('data-table');
         table.innerHTML = '';
         const header = document.createElement('tr');
-        const keys = ['Voter_ID','Name','Address','Age','Party','Occupation','Precinct','Turf','Voted_Town','Voted_MBTA','Voted_State'];
+        const keys = ['Voter_ID','Name','Address','Age','Party','Occupation','Precinct','Turf','Voted_Town','Voted_MBTA','Voted_State','Phone','Email','Visit_Status','Support_Status'];
         keys.forEach(k => {
           const th = document.createElement('th');
           th.textContent = k;
