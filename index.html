@@ -5,59 +5,47 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet-extra-markers/1.0.8/css/leaflet.extra-markers.min.css" />
   <style>
     body { font-family: Arial, sans-serif; }
     #controls { margin: 10px; }
-    #map { height: 80vh; }
+    #precincts-toggle details { margin-bottom: 10px; }
+    .precinct-btn { margin: 2px; padding: 5px 10px; border: 1px solid #333; background: #eee; cursor: pointer; }
     #view-toggle { margin: 10px; }
-    #modal {
-      position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
-      background: white; padding: 20px; border: 2px solid black; display: none;
-      z-index: 1000; max-width: 90%; box-shadow: 0 0 10px rgba(0,0,0,0.5);
-      font-family: 'Courier New', monospace;
-    }
-    .modal-field { margin: 5px 0; display: flex; align-items: center; }
-    .modal-field b { display: inline-block; width: 130px; }
-    .modal-buttons { display: flex; justify-content: space-between; margin-top: 10px; }
-    select, input[type="text"], textarea { font-size: 14px; flex: 1; }
-    #log {
-      padding: 10px; background: #f0f0f0; border-top: 1px solid #ccc;
-      font-family: monospace; max-height: 20vh; overflow-y: auto; white-space: pre-wrap;
-    }
-    #legend {
-      position: absolute; top: 10px; right: 10px; background: white;
-      padding: 10px; border: 1px solid #ccc; font-size: 14px;
-      font-family: Arial, sans-serif; box-shadow: 0 0 5px rgba(0,0,0,0.3); z-index: 1001;
-    }
-    .legend-item { display: flex; align-items: center; margin-bottom: 5px; }
-    .legend-icon { width: 20px; height: 20px; margin-right: 8px; }
-    #precinct-controls {
-      position: absolute; top: 10px; left: 10px; background: white; padding: 10px;
-      border: 1px solid #ccc; box-shadow: 0 0 5px rgba(0,0,0,0.3); z-index: 1001;
-      font-size: 14px; font-family: Arial, sans-serif;
-    }
-    #precinct-toggles button { margin: 2px; }
+
+    #map { height: 70vh; }
     #table-view { display: none; margin: 10px; overflow-x: auto; }
     table { border-collapse: collapse; width: 100%; }
     th, td { border: 1px solid #ccc; padding: 5px; font-family: monospace; font-size: 13px; }
-    tr:hover { background-color: #f0f0f0; cursor: pointer; }
-    .row-blue { background-color: #e6f0ff; } .row-blue-dot { background-color: #d0e0ff; }
-    .row-green { background-color: #e0ffe0; } .row-red { background-color: #ffe0e0; }
-    .row-yellow { background-color: #fff9cc; } .row-purple { background-color: #f2e6ff; }
-    .row-gray { background-color: #eeeeee; }
+    tr:hover { background: #f0f0f0; cursor: pointer; }
+
+    #log {
+      padding: 10px; background: #f9f9f9; border-top: 1px solid #ccc;
+      font-family: monospace; max-height: 20vh; overflow-y: auto;
+    }
+
+    #legend {
+      position: absolute; top: 10px; right: 10px; background: white;
+      padding: 10px; border: 1px solid #ccc; font-size: 14px;
+      box-shadow: 0 0 5px rgba(0,0,0,0.3); z-index: 1001;
+    }
+    .legend-item {
+      display: flex; align-items: center; margin-bottom: 5px;
+    }
+    .legend-icon {
+      width: 20px; height: 20px; margin-right: 8px;
+    }
   </style>
 </head>
 <body>
+
   <div id="controls">
-    <div id="precinct-controls">
-      <details open>
-        <summary><b>Precincts</b></summary>
-        <div id="precinct-toggles"></div>
-      </details>
-    </div>
+    <details open id="precincts-toggle">
+      <summary><b>Precincts</b></summary>
+      <div id="precinct-buttons"></div>
+    </details>
     <button id="view-toggle">View: Map</button>
   </div>
+
   <div id="map"></div>
   <div id="table-view"><table id="data-table"></table></div>
 
@@ -73,157 +61,134 @@
     </details>
   </div>
 
-  <!-- Modal -->
-  <div id="modal">
-    <div id="card-content"></div>
-    <div class="modal-field">
-      <b>Phone:</b><input type="text" id="phone-input" />
-    </div>
-    <div class="modal-field">
-      <b>Email:</b><input type="text" id="email-input" />
-    </div>
-    <div class="modal-field">
-      <b>Notes:</b><textarea id="notes-input" rows="2"></textarea>
-    </div>
-    <div class="modal-field">
-      <b>Visited:</b>
-      <select id="visit-status">
-        <option value="">-- Select --</option>
-        <option value="Not Visited">Not Visited</option>
-        <option value="No Answer">No Answer</option>
-        <option value="Spoke to Someone">Spoke to Someone</option>
-      </select>
-    </div>
-    <div class="modal-field">
-      <b>Supports:</b>
-      <select id="support-status">
-        <option value="">-- Select --</option>
-        <option value="Supports">Supports</option>
-        <option value="Declined">Declined</option>
-        <option value="Unsure">Unsure</option>
-        <option value="Already Involved">Already Involved</option>
-      </select>
-    </div>
-    <div class="modal-buttons">
-      <button id="close-btn">Close</button>
-      <button id="save-btn">Save</button>
-    </div>
-  </div>
-
   <div id="log"></div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet-extra-markers/1.0.8/js/leaflet.extra-markers.min.js"></script>
   <script>
     const map = L.map('map').setView([42.25, -71.07], 13);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 
-    let precinctUrls = {}, toggledPrecincts = {}, markersByPrecinct = {}, rowsByPrecinct = {}, markerMap = new Map();
-    function log(msg) { const el = document.getElementById('log'); el.innerText += `\n${msg}`; el.scrollTop = el.scrollHeight; }
+    let precinctUrls = {};
+    let toggledPrecincts = {};
+    let markersByPrecinct = {};
+    let rowsByPrecinct = {};
 
-    function getColor(visit, support) {
-      if (visit === 'Not Visited') return 'blue';
-      if (visit === 'No Answer') return 'blue-dot';
-      if (visit === 'Spoke to Someone') {
-        switch (support) { case 'Supports': return 'green'; case 'Declined': return 'red'; case 'Unsure': return 'yellow'; case 'Already Involved': return 'purple'; } return 'blue-dot';
-      } return 'gray';
+    function log(msg) {
+      const el = document.getElementById('log');
+      el.innerText += `\n${msg}`;
+      el.scrollTop = el.scrollHeight;
+    }
+
+    function getColor(visitStatus, supportStatus) {
+      if (visitStatus === 'Not Visited') return 'blue';
+      if (visitStatus === 'No Answer') return 'blue-dot';
+      if (visitStatus === 'Spoke to Someone') {
+        switch (supportStatus) {
+          case 'Supports': return 'green';
+          case 'Declined': return 'red';
+          case 'Unsure': return 'yellow';
+          case 'Already Involved': return 'purple';
+          default: return 'blue-dot';
+        }
+      }
+      return 'gray';
     }
 
     function createMarker(voter) {
-      const color = getColor(voter.Visit_Status, voter.Support_Status);
-      const iconType = voter.Voted_Town?.startsWith('25') ? 'star' : 'circle';
-      const icon = L.ExtraMarkers.icon({
-        icon: 'fa-number',
-        number: voter.Num_Voters || '',
-        markerColor: color,
-        shape: iconType
-      });
-      const lat = parseFloat(voter.Latitude), lng = parseFloat(voter.Longitude);
+      if (!voter.Latitude || !voter.Longitude) return null;
+      const lat = parseFloat(voter.Latitude);
+      const lng = parseFloat(voter.Longitude);
       if (isNaN(lat) || isNaN(lng)) return null;
-      const marker = L.marker([lat, lng], { icon }).addTo(map);
+
+      const color = getColor(voter.Visit_Status, voter.Support_Status);
+      const marker = L.marker([lat, lng], {
+        icon: L.icon({
+          iconUrl: `https://maps.google.com/mapfiles/ms/icons/${color}.png`,
+          iconSize: [32, 32], iconAnchor: [16, 32]
+        })
+      }).addTo(map);
       marker.voterData = voter;
       marker.on('click', () => showModal(voter));
-      markerMap.set(voter.Row, marker);
       return marker;
-    }
-
-    async function loadPrecincts() {
-      const resp = await fetch('sheets_urls.json');
-      precinctUrls = await resp.json();
-      const toggles = document.getElementById('precinct-toggles');
-      for (const [label] of Object.entries(precinctUrls)) {
-        const btn = document.createElement('button');
-        btn.textContent = label;
-        btn.onclick = () => togglePrecinct(label, btn);
-        toggles.appendChild(btn);
-      }
     }
 
     async function togglePrecinct(label, btn) {
       if (toggledPrecincts[label]) {
         toggledPrecincts[label] = false; btn.style.background = '';
-        markersByPrecinct[label]?.forEach(m => map.removeLayer(m)); delete markersByPrecinct[label]; delete rowsByPrecinct[label];
-        log(`Deselected ${label}`);
-        updateTable(); return;
+        markersByPrecinct[label]?.forEach(m => map.removeLayer(m));
+        delete markersByPrecinct[label]; delete rowsByPrecinct[label];
+        log(`Deselected ${label} — removed markers and rows.`);
+        updateTable();
+        return;
       }
-      toggledPrecincts[label] = true; btn.style.background = '#ccc'; log(`Loading ${label}`);
+
+      toggledPrecincts[label] = true; btn.style.background = '#ccc';
       const url = precinctUrls[label];
-      const data = await fetch(url).then(r => r.json());
-      const markers = data.map(v => createMarker(v)).filter(m => m);
-      markersByPrecinct[label] = markers; rowsByPrecinct[label] = data;
-      log(`Fetched ${data.length} rows for ${label}`);
-      updateTable();
+      log(`Fetching sheet data for ${label} from: ${url}`);
+
+      try {
+        const data = await fetch(url).then(r => r.json());
+        log(`Fetched ${data.length} voters for ${label}`);
+        const markers = data.map(v => createMarker(v)).filter(m => m);
+        markersByPrecinct[label] = markers;
+        rowsByPrecinct[label] = data;
+        log(`Placed ${markers.length} markers for ${label}`);
+        updateTable();
+      } catch (err) {
+        log(`Fetch error for ${label}: ${err}`);
+        alert(`Could not load sheet for ${label}.`);
+        toggledPrecincts[label] = false; btn.style.background = '';
+      }
     }
 
     function updateTable() {
-      const table = document.getElementById('data-table'); table.innerHTML = '';
-      const keys = ['Voter_ID','Name','Address','Age','Party','Occupation','Precinct','Turf','Voted_Town','Voted_MBTA','Voted_State','Num_Voters','Phone','Email','Visit_Status','Support_Status'];
-      const header = document.createElement('tr'); keys.forEach(k => { const th = document.createElement('th'); th.textContent = k; header.appendChild(th); }); table.appendChild(header);
-      for (const label in toggledPrecincts) {
-        if (!toggledPrecincts[label]) continue;
-        rowsByPrecinct[label]?.forEach(voter => {
-          const row = document.createElement('tr');
-          row.onclick = () => showModal(voter);
-          row.classList.add(`row-${getColor(voter.Visit_Status, voter.Support_Status)}`);
-          keys.forEach(k => { const td = document.createElement('td'); td.textContent = voter[k] || ''; row.appendChild(td); });
-          table.appendChild(row);
+      const table = document.getElementById('data-table');
+      table.innerHTML = '';
+      const keys = ['Voter_ID','Name','Address','Age','Party','Occupation','Precinct','Turf'];
+      const header = document.createElement('tr');
+      keys.forEach(k => {
+        const th = document.createElement('th'); th.textContent = k; header.appendChild(th);
+      });
+      table.appendChild(header);
+
+      Object.values(rowsByPrecinct).flat().forEach(voter => {
+        const row = document.createElement('tr');
+        row.onclick = () => showModal(voter);
+        keys.forEach(k => {
+          const td = document.createElement('td');
+          td.textContent = voter[k] || '';
+          row.appendChild(td);
         });
-      }
+        table.appendChild(row);
+      });
     }
-
-    function showModal(voter) {
-      currentVoter = { ...voter };
-      const fields = [['Voter_ID','Voter ID'], ['Name','Name'], ['Address','Address'], ['Age','Age'], ['Party','Party'], ['Occupation','Occupation'], ['Precinct','Precinct'],
-        ['Turf','Turf'], ['Voted_Town','Town Votes'], ['Voted_MBTA','MBTA'], ['Voted_State','State Votes'], ['Num_Voters','Household']];
-      const html = fields.map(([k,lbl]) => `<div class="modal-field"><b>${lbl}:</b> ${voter[k]||''}</div>`).join('');
-      document.getElementById('card-content').innerHTML = html;
-      document.getElementById('phone-input').value = voter.Phone || '';
-      document.getElementById('email-input').value = voter.Email || '';
-      document.getElementById('notes-input').value = voter.Notes || '';
-      document.getElementById('visit-status').value = voter.Visit_Status || '';
-      document.getElementById('support-status').value = voter.Support_Status || '';
-      document.getElementById('modal').style.display = 'block';
-    }
-
-    document.getElementById('close-btn').onclick = () => { document.getElementById('modal').style.display = 'none'; };
-    document.getElementById('save-btn').onclick = () => {
-      currentVoter.Phone = document.getElementById('phone-input').value;
-      currentVoter.Email = document.getElementById('email-input').value;
-      currentVoter.Notes = document.getElementById('notes-input').value;
-      currentVoter.Visit_Status = document.getElementById('visit-status').value;
-      currentVoter.Support_Status = document.getElementById('support-status').value;
-      const color = getColor(currentVoter.Visit_Status, currentVoter.Support_Status);
-      const iconType = currentVoter.Voted_Town.startsWith('25') ? 'star' : 'circle';
-      markerMap.get(currentVoter.Row)?.setIcon(L.ExtraMarkers.icon({ icon: 'fa-number', number: currentVoter.Num_Voters || '', markerColor: color, shape: iconType }));
-      updateTable(); log(`Updated row: ${currentVoter.Voter_ID}`); document.getElementById('modal').style.display = 'none';
-    };
 
     document.getElementById('view-toggle').onclick = () => {
-      const mapDiv = document.getElementById('map'), tableDiv = document.getElementById('table-view');
+      const mapDiv = document.getElementById('map');
+      const tableDiv = document.getElementById('table-view');
       const btn = document.getElementById('view-toggle');
-      if (mapDiv.style.display === 'none') { mapDiv.style.display = 'block'; tableDiv.style.display = 'none'; btn.textContent = 'View: Map'; }
-      else { mapDiv.style.display = 'none'; tableDiv.style.display = 'block'; btn.textContent = 'View: Rows'; }
+      if (mapDiv.style.display === 'none') {
+        mapDiv.style.display = 'block'; tableDiv.style.display = 'none';
+        btn.textContent = 'View: Map';
+      } else {
+        mapDiv.style.display = 'none'; tableDiv.style.display = 'block';
+        btn.textContent = 'View: Rows';
+      }
     };
+
+    async function loadPrecincts() {
+      const resp = await fetch('sheets_urls.json');
+      const urls = await resp.json();
+      precinctUrls = urls;
+
+      const container = document.getElementById('precinct-buttons');
+      Object.entries(urls).forEach(([label]) => {
+        const btn = document.createElement('button');
+        btn.className = 'precinct-btn'; btn.textContent = label;
+        btn.onclick = () => togglePrecinct(label, btn);
+        container.appendChild(btn);
+      });
+    }
 
     loadPrecincts();
   </script>
