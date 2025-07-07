@@ -3,23 +3,21 @@
 <head>
   <title>Turfs Viewer</title>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet-extra-markers/dist/css/leaflet.extra-markers.min.css"/>
   <style>
-    body { font-family: Arial, sans-serif; }
-    #map { height: 80vh; }
-    #precincts-toggle { margin: 10px; }
-    #precincts { margin: 10px; display: none; }
-    .precinct-btn { margin: 2px; }
-    #view-toggle { margin: 10px; }
-    #legend {
-      position: absolute; top: 10px; right: 10px; background: white; padding: 10px;
-      border: 1px solid #ccc; box-shadow: 0 0 5px rgba(0,0,0,0.3); z-index: 1001;
-    }
+    body { margin: 0; font-family: Arial, sans-serif; }
+    #header { display: flex; justify-content: space-between; align-items: center; margin: 10px; }
+    #precinct-container, #legend { background: white; border: 1px solid #ccc; padding: 10px; box-shadow: 0 0 5px rgba(0,0,0,0.3); }
+    #precinct-toggles button { margin: 2px; padding: 5px 10px; cursor: pointer; border: 1px solid #ccc; }
+    #precinct-toggles button.active { background: #007bff; color: white; }
+    #view-toggle { margin: 0 20px; padding: 8px 16px; font-size: 16px; cursor: pointer; }
     .legend-item { display: flex; align-items: center; margin-bottom: 5px; }
     .legend-icon { width: 20px; height: 20px; margin-right: 8px; }
+    #map { height: 70vh; }
     #table-view { display: none; margin: 10px; overflow-x: auto; }
-    table { border-collapse: collapse; width: 100%; }
+    table { border-collapse: collapse; width: 100%; table-layout: auto; }
     th, td { border: 1px solid #ccc; padding: 5px; font-family: monospace; font-size: 13px; white-space: nowrap; }
     tr:hover { background-color: #f0f0f0; cursor: pointer; }
     .row-blue { background-color: #e6f0ff; }
@@ -29,47 +27,41 @@
     .row-yellow { background-color: #fff9cc; }
     .row-purple { background-color: #f2e6ff; }
     .row-gray { background-color: #eeeeee; }
-    #modal {
-      position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
-      background: white; padding: 20px; border: 2px solid black; display: none;
-      z-index: 1000; max-width: 400px; box-shadow: 0 0 10px rgba(0,0,0,0.5);
-      font-family: 'Courier New', monospace; font-size: 12pt;
-    }
-    .modal-field { margin: 5px 0; }
+    #modal { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 20px; border: 2px solid black; display: none; z-index: 2000; max-width: 90%; box-shadow: 0 0 10px rgba(0,0,0,0.5); font-family: 'Courier New', monospace; font-size: 12pt; }
+    .modal-field { margin: 5px 0; display: flex; align-items: center; }
+    .modal-field b { display: inline-block; width: 150px; }
     .modal-buttons { display: flex; justify-content: space-between; margin-top: 10px; }
     .modal-buttons button { padding: 10px 20px; font-size: 16px; }
-    #log {
-      padding: 10px; background: #f0f0f0; border-top: 1px solid #ccc;
-      font-family: monospace; max-height: 20vh; overflow-y: auto;
-    }
+    #log { padding: 10px; background: #f0f0f0; border-top: 1px solid #ccc; font-family: monospace; max-height: 20vh; overflow-y: auto; }
   </style>
 </head>
 <body>
-  <button id="precincts-toggle">Precincts ▼</button>
-  <div id="precincts"></div>
-  <button id="view-toggle">View: Map</button>
+  <div id="header">
+    <div id="precinct-container">
+      <details open><summary><b>Precincts</b></summary><div id="precinct-toggles"></div></details>
+    </div>
+    <button id="view-toggle">View: Map</button>
+    <div id="legend">
+      <details open>
+        <summary><b>Legend</b></summary>
+        <div class="legend-item"><img class="legend-icon" src="https://maps.google.com/mapfiles/ms/icons/blue.png"> Not Visited</div>
+        <div class="legend-item"><img class="legend-icon" src="https://maps.google.com/mapfiles/ms/icons/blue-dot.png"> No Answer</div>
+        <div class="legend-item"><img class="legend-icon" src="https://maps.google.com/mapfiles/ms/icons/green.png"> Supports</div>
+        <div class="legend-item"><img class="legend-icon" src="https://maps.google.com/mapfiles/ms/icons/red.png"> Declined</div>
+        <div class="legend-item"><img class="legend-icon" src="https://maps.google.com/mapfiles/ms/icons/yellow.png"> Unsure</div>
+        <div class="legend-item"><img class="legend-icon" src="https://maps.google.com/mapfiles/ms/icons/purple.png"> Already Involved</div>
+      </details>
+    </div>
+  </div>
+
   <div id="map"></div>
   <div id="table-view"><table id="data-table"></table></div>
 
-  <!-- Legend -->
-  <div id="legend">
-    <details open>
-      <summary><b>Legend</b></summary>
-      <div class="legend-item"><img class="legend-icon" src="https://maps.google.com/mapfiles/ms/icons/blue.png"> Not Visited</div>
-      <div class="legend-item"><img class="legend-icon" src="https://maps.google.com/mapfiles/ms/icons/blue-dot.png"> No Answer</div>
-      <div class="legend-item"><img class="legend-icon" src="https://maps.google.com/mapfiles/ms/icons/green.png"> Supports</div>
-      <div class="legend-item"><img class="legend-icon" src="https://maps.google.com/mapfiles/ms/icons/red.png"> Declined</div>
-      <div class="legend-item"><img class="legend-icon" src="https://maps.google.com/mapfiles/ms/icons/yellow.png"> Unsure</div>
-      <div class="legend-item"><img class="legend-icon" src="https://maps.google.com/mapfiles/ms/icons/purple.png"> Already Involved</div>
-    </details>
-  </div>
-
-  <!-- Modal -->
   <div id="modal">
     <div id="card-content"></div>
-    <div class="modal-field"><b>Phone:</b><br/><input type="text" id="phone-input" /></div>
-    <div class="modal-field"><b>Email:</b><br/><input type="text" id="email-input" /></div>
-    <div class="modal-field"><b>Visited:</b><br/>
+    <div class="modal-field"><b>Phone:</b><input type="text" id="phone-input"></div>
+    <div class="modal-field"><b>Email:</b><input type="text" id="email-input"></div>
+    <div class="modal-field"><b>Visited:</b>
       <select id="visit-status">
         <option value="">-- Select --</option>
         <option value="Not Visited">Not Visited</option>
@@ -77,7 +69,7 @@
         <option value="Spoke to Someone">Spoke to Someone</option>
       </select>
     </div>
-    <div class="modal-field"><b>Supports:</b><br/>
+    <div class="modal-field"><b>Supports:</b>
       <select id="support-status">
         <option value="">-- Select --</option>
         <option value="Supports">Supports</option>
@@ -86,7 +78,7 @@
         <option value="Already Involved">Already Involved</option>
       </select>
     </div>
-    <div class="modal-field"><b>Notes:</b><br/><textarea id="notes-input" rows="3" style="width: 100%;"></textarea></div>
+    <div class="modal-field"><b>Notes:</b><input type="text" id="notes-input"></div>
     <div class="modal-buttons">
       <button id="close-btn">Close</button>
       <button id="save-btn">Save</button>
@@ -96,150 +88,116 @@
   <div id="log"></div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet-extra-markers/dist/js/leaflet.extra-markers.min.js"></script>
   <script>
     const map = L.map('map').setView([42.25, -71.07], 13);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
-    let allMarkers = [], selectedPrecincts = {}, markerMap = new Map(), currentVoter = null, currentSheets = {};
 
-    function jitter(coord, amount = 0.0001) {
-      return coord + (Math.random() * 2 - 1) * amount;
-    }
+    let allMarkers = [], markerMap = new Map(), currentData = {}, precinctMarkers = {}, selectedPrecincts = {}, currentVoter = null, sheetsUrls = {};
 
-    function log(msg) {
-      const el = document.getElementById('log');
-      el.innerText += `\n${msg}`;
-      el.scrollTop = el.scrollHeight;
-    }
-
-    function getColor(vs, ss) {
-      if (vs === 'Not Visited') return 'blue';
-      if (vs === 'No Answer') return 'blue-dot';
-      if (vs === 'Spoke to Someone') {
-        switch (ss) {
-          case 'Supports': return 'green';
-          case 'Declined': return 'red';
-          case 'Unsure': return 'yellow';
-          case 'Already Involved': return 'purple';
-        }
-        return 'blue-dot';
-      }
-      return 'gray';
-    }
-
-    async function loadSheets() {
-      const urls = await fetch('sheets_urls.json').then(r => r.json());
-      const container = document.getElementById('precincts');
-      Object.entries(urls).forEach(([label, url]) => {
-        const btn = document.createElement('button');
-        btn.textContent = label;
-        btn.className = 'precinct-btn';
-        btn.onclick = () => togglePrecinct(label, url, btn);
-        container.appendChild(btn);
+    function jitter(coord) { return coord + (Math.random() * 2 - 1) * 0.0001; }
+    function log(msg) { const el = document.getElementById('log'); el.innerText += `\n${msg}`; el.scrollTop = el.scrollHeight; }
+    function getColor(v,s){ if(v==='Not Visited')return'blue';if(v==='No Answer')return'blue-dot';if(v==='Spoke to Someone'){switch(s){case'Supports':return'green';case'Declined':return'red';case'Unsure':return'yellow';case'Already Involved':return'purple';default:return'blue-dot';}}return'gray'; }
+    function getIcon(voter){
+      const shape = voter.Voted_Town?.startsWith("25") ? 'star' : 'circle';
+      const color = getColor(voter.Visit_Status, voter.Support_Status);
+      return L.ExtraMarkers.icon({
+        icon: 'fa-number', number: voter.Num_Voters || '',
+        markerColor: color.includes('blue') ? 'blue' : color,
+        shape: shape, prefix: 'fa'
       });
     }
 
-    async function togglePrecinct(label, url, btn) {
-      if (selectedPrecincts[label]) {
-        selectedPrecincts[label].forEach(m => map.removeLayer(m));
-        delete selectedPrecincts[label];
-        updateTable();
-        btn.classList.remove('active');
-      } else {
-        const data = await fetch(url).then(r => r.json());
-        log(`Fetched ${data.length} voters from ${label}`);
-        const markers = [];
-        data.forEach(voter => {
-          const lat = jitter(parseFloat(voter.Latitude));
-          const lng = jitter(parseFloat(voter.Longitude));
-          const color = getColor(voter.Visit_Status, voter.Support_Status);
-          const marker = L.marker([lat, lng], {
-            icon: L.icon({ iconUrl: `https://maps.google.com/mapfiles/ms/icons/${color}.png`, iconSize: [32,32], iconAnchor: [16,32] })
-          }).addTo(map);
-          marker.voterData = voter;
-          marker.on('click', () => showModal(voter, url));
-          markers.push(marker);
-          markerMap.set(voter.Voter_ID, marker);
-        });
-        selectedPrecincts[label] = markers;
-        currentSheets[label] = { url, data };
-        updateTable();
-        btn.classList.add('active');
-      }
-    }
-
-    function updateTable() {
-      const table = document.getElementById('data-table');
-      table.innerHTML = '';
-      const keys = ['Voter_ID','Name','Address','Age','Party','Occupation','Precinct','Turf','Voted_Town','Voted_MBTA','Voted_State','Num_Voters','Phone','Email','Visit_Status','Support_Status','Notes'];
-      const header = document.createElement('tr');
-      keys.forEach(k => { const th = document.createElement('th'); th.textContent = k; header.appendChild(th); });
-      table.appendChild(header);
-      Object.values(currentSheets).forEach(sheet => {
-        sheet.data.forEach(voter => {
-          const row = document.createElement('tr');
-          const color = getColor(voter.Visit_Status, voter.Support_Status);
-          row.classList.add(`row-${color}`);
-          row.onclick = () => showModal(voter, sheet.url);
-          keys.forEach(k => {
-            const td = document.createElement('td'); td.textContent = voter[k] || ''; row.appendChild(td);
-          });
-          table.appendChild(row);
-        });
+    async function loadPrecincts(){
+      const resp=await fetch('sheets_urls.json'); sheetsUrls=await resp.json();
+      const toggles=document.getElementById('precinct-toggles');
+      Object.keys(sheetsUrls).forEach(name=>{
+        const btn=document.createElement('button'); btn.textContent=name; btn.onclick=()=>togglePrecinct(name,btn); toggles.appendChild(btn);
       });
     }
 
-    function showModal(voter, url) {
-      currentVoter = { ...voter }; currentSheetUrl = url;
-      let html = '';
-      ['Voter_ID','Name','Address','Age','Party','Occupation','Precinct','Turf','Voted_Town','Voted_MBTA','Voted_State','Num_Voters'].forEach(f => {
-        html += `<div class="modal-field"><b>${f.replace(/_/g,' ')}:</b> ${voter[f] || ''}</div>`;
-      });
-      document.getElementById('card-content').innerHTML = html;
-      document.getElementById('phone-input').value = voter.Phone || '';
-      document.getElementById('email-input').value = voter.Email || '';
-      document.getElementById('visit-status').value = voter.Visit_Status || '';
-      document.getElementById('support-status').value = voter.Support_Status || '';
-      document.getElementById('notes-input').value = voter.Notes || '';
-      document.getElementById('modal').style.display = 'block';
+    async function togglePrecinct(name,btn){
+      if(btn.classList.contains('active')){
+        btn.classList.remove('active'); deselectPrecinct(name);
+      } else{
+        btn.classList.add('active'); await loadPrecinct(name);
+      }
     }
 
-    document.getElementById('close-btn').onclick = () => {
-      document.getElementById('modal').style.display = 'none';
+    async function loadPrecinct(name){
+      if(selectedPrecincts[name])return;
+      const url=sheetsUrls[name];
+      log(`Fetching sheet data from: ${url}`);
+      const data=await fetch(url).then(r=>r.json());
+      log(`Fetched ${data.length} voters`);
+      currentData[name]=data;
+      selectedPrecincts[name]=true;
+      precinctMarkers[name]=[];
+
+      data.forEach(v=>{
+        v.Precinct = name;
+        const lat=jitter(parseFloat(v.Latitude)), lng=jitter(parseFloat(v.Longitude));
+        if(isNaN(lat)||isNaN(lng))return;
+        const marker=L.marker([lat,lng],{icon:getIcon(v)}).addTo(map);
+        marker.voterData=v;
+        marker.on('click',()=>showModal(v));
+        allMarkers.push(marker); precinctMarkers[name].push(marker); markerMap.set(v.Voter_ID,marker);
+      });
+
+      renderRows();
+    }
+
+    function deselectPrecinct(name){
+      (precinctMarkers[name]||[]).forEach(m=>{map.removeLayer(m); markerMap.delete(m.voterData.Voter_ID);});
+      delete selectedPrecincts[name]; delete currentData[name]; precinctMarkers[name]=[];
+      renderRows();
+    }
+
+    function renderRows(){
+      const t=document.getElementById('data-table'); t.innerHTML='';
+      const keys=['Voter_ID','Name','Address','Age','Party','Occupation','Precinct','Turf','Voted_Town','Voted_MBTA','Voted_State','Num_Voters','Phone','Email','Visit_Status','Support_Status','Notes'];
+      const tr=document.createElement('tr'); keys.forEach(k=>{const th=document.createElement('th'); th.textContent=k; tr.appendChild(th);}); t.appendChild(tr);
+      Object.values(currentData).flat().forEach(v=>{
+        const r=document.createElement('tr'); r.classList.add(`row-${getColor(v.Visit_Status,v.Support_Status)}`); r.onclick=()=>showModal(v);
+        keys.forEach(k=>{const td=document.createElement('td'); td.textContent=v[k]||''; r.appendChild(td);}); t.appendChild(r);
+      });
+    }
+
+    function showModal(v){
+      currentVoter={...v};
+      const fields=['Voter_ID','Name','Address','Age','Party','Occupation','Precinct','Turf','Voted_Town','Voted_MBTA','Voted_State','Num_Voters'];
+      document.getElementById('card-content').innerHTML=fields.map(f=>`<div class="modal-field"><b>${f.replace('_',' ')}:</b> ${v[f]||''}</div>`).join('');
+      document.getElementById('phone-input').value=v.Phone||'';
+      document.getElementById('email-input').value=v.Email||'';
+      document.getElementById('notes-input').value=v.Notes||'';
+      document.getElementById('visit-status').value=v.Visit_Status||'';
+      document.getElementById('support-status').value=v.Support_Status||'';
+      document.getElementById('modal').style.display='block';
+    }
+
+    document.getElementById('save-btn').onclick=async()=>{
+      currentVoter.Phone=document.getElementById('phone-input').value;
+      currentVoter.Email=document.getElementById('email-input').value;
+      currentVoter.Notes=document.getElementById('notes-input').value;
+      currentVoter.Visit_Status=document.getElementById('visit-status').value;
+      currentVoter.Support_Status=document.getElementById('support-status').value;
+
+      const url=sheetsUrls[currentVoter.Precinct];
+      log(`POST to ${url} with ${JSON.stringify(currentVoter)}`);
+      const res=await fetch(url,{method:'POST',body:JSON.stringify(currentVoter),headers:{'Content-Type':'text/plain'}});
+      const result=await res.json();
+      if(result.status==='success'){
+        const m=markerMap.get(currentVoter.Voter_ID);
+        if(m){ m.setIcon(getIcon(currentVoter)); m.voterData={...currentVoter}; }
+        Object.values(currentData).flat().forEach(v=>{ if(v.Voter_ID===currentVoter.Voter_ID) Object.assign(v,currentVoter); });
+        renderRows(); document.getElementById('modal').style.display='none';
+      } else{ alert('Update failed'); }
     };
 
-    document.getElementById('save-btn').onclick = async () => {
-      if (!currentVoter) return;
-      currentVoter.Phone = document.getElementById('phone-input').value;
-      currentVoter.Email = document.getElementById('email-input').value;
-      currentVoter.Visit_Status = document.getElementById('visit-status').value;
-      currentVoter.Support_Status = document.getElementById('support-status').value;
-      currentVoter.Notes = document.getElementById('notes-input').value;
-      log(`POST to ${currentSheetUrl}: ${JSON.stringify(currentVoter)}`);
-      await fetch(currentSheetUrl, { method:'POST', body: JSON.stringify(currentVoter), headers:{'Content-Type':'text/plain'} });
-      const marker = markerMap.get(currentVoter.Voter_ID);
-      if (marker) {
-        Object.assign(marker.voterData, currentVoter);
-        const color = getColor(currentVoter.Visit_Status, currentVoter.Support_Status);
-        marker.setIcon(L.icon({ iconUrl: `https://maps.google.com/mapfiles/ms/icons/${color}.png`, iconSize: [32,32], iconAnchor: [16,32] }));
-      }
-      updateTable();
-      document.getElementById('modal').style.display = 'none';
-    };
+    document.getElementById('close-btn').onclick=()=>{document.getElementById('modal').style.display='none';};
+    document.getElementById('view-toggle').onclick=()=>{ const m=document.getElementById('map'), t=document.getElementById('table-view'); if(m.style.display==='none'){m.style.display='block';t.style.display='none';}else{m.style.display='none';t.style.display='block';}};
 
-    document.getElementById('view-toggle').onclick = () => {
-      const mapDiv = document.getElementById('map');
-      const tableDiv = document.getElementById('table-view');
-      if (mapDiv.style.display === 'none') {
-        mapDiv.style.display = 'block'; tableDiv.style.display = 'none';
-      } else { mapDiv.style.display = 'none'; tableDiv.style.display = 'block'; }
-    };
-
-    document.getElementById('precincts-toggle').onclick = () => {
-      const div = document.getElementById('precincts');
-      div.style.display = div.style.display === 'none' ? 'block' : 'none';
-    };
-
-    loadSheets();
+    loadPrecincts();
   </script>
 </body>
 </html>
