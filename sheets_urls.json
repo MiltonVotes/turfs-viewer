@@ -1,14 +1,13 @@
 {
-  "Republicans 4" : "https://script.google.com/macros/s/AKfycbz9SW2UbIIYb5Nk75APuar75ISyZFIeo4ec53_LzlOueUTa6zOBejjNp9iFKkvBZcyItA/exec",
-  "Precinct 1"  : "https://script.google.com/macros/s/AKfycbx0XQ0rijh9pb_0Osu1KegJAv5m9pZ6XJiZp3QWgMfhYYvX2YrvyqNFbcH-Fi0K78RD/exec",
-  "Precinct 2"  : "https://script.google.com/macros/s/AKfycbxcqEXj1QSahoal8C4RqtIjQarXScvYQcZLaKpIJCp0T0ekFn00upSArBgDT-0l1LDw/exec",
-  "Precinct 3"  : "https://script.google.com/macros/s/AKfycbz4oQrHkwjaUsKdnVX1eVvyMkKqbNYj-aVe3n5qLdiBL5XNgDFFtxdEENJcmuM02J1wZA/exec",
-  "Precinct 4"  : "https://script.google.com/macros/s/AKfycbyqVZ3TiaUUMd4Y1v5zhYW7-nmrB-XG85AW-fpSdkfaftMz_VfmHKShC-XH3aj1hnSW/exec",
-  "Precinct 4A" : "https://script.google.com/macros/s/AKfycbxejMzI86g_gE2ae5cySTuxndUrVXo2w4VI3Ax6bvYuH3JRtMzc0Mfc_6KVtDR1dnwU2A/exec",
-  "Precinct 5"  : "https://script.google.com/macros/s/AKfycbzE5LDxyjWkgzcC0rBDtMONVmCRjG-_tahwrkokFHWht9ZAdGOqut_bVknhYb5kQTG2/exec",
-  "Precinct 6"  : "https://script.google.com/macros/s/AKfycbzJplHHQxfwvShTJNqygQpK9SdnXu01xfeXL-0l83eytuPDyuP0jVCePsl4ctFF2Nxd/exec",
-  "Precinct 7"  : "https://script.google.com/macros/s/AKfycbwArOIMg3oEPW-EuZ6pOOEN387EXc1zBQT1VYqb2cUTGneqHkEXCkfIBrIEinEQ-Hp9/exec",
-  "Precinct 8"  : "https://script.google.com/macros/s/AKfycby9XQuXaQspPSbZoi9EUFpOTqpXrFQexoRO_dC28LCnZHJ_uXQuCvhguOKQPuR2rK2OLg/exec",
-  "Precinct 9"  : "https://script.google.com/macros/s/AKfycbzurmOE4ttzn8GoQxd_GUHniUPw9Rd6QG8-UXlL9bcFw3wLqHzaF-6jemWWYeH7mrwL/exec",
-  "Precinct 10" : "https://script.google.com/macros/s/AKfycbygHSYbASMOQZHmxu-rLoPBKZt9GzE6T1YC-kisRrRUIDL_cqk0Py-X7RmE79JIfjCu/exec"
+  "Precinct 1"  : "https://script.google.com/macros/s/AKfycbxo2mZuIfytUoIYDR7VcDK1TdwlZwXMzVAONJ0zfimDbauLboayx5B6u_XLCy0r_sX9/exec",
+  "Precinct 2"  : "https://script.google.com/macros/s/AKfycbxOxZB0NfdJjrFARSm4-XvKe8m9jDvjmf-gfQFIDu6QZphWKAOiznzCOXx7aVd3d3OB/exec",
+  "Precinct 3"  : "https://script.google.com/macros/s/AKfycbzPikcgM_I-k_2gT80XmMl0BAy3FOZfM9b0XtBia51k_6BxHtTqI0YItUH4ZMl5Gj8kew/exec",
+  "Precinct 4"  : "https://script.google.com/macros/s/AKfycbyFO3PskZAUxKtrgdOEllCEGu1w4Sjrmr4uWsFACe3tqBso64jXkWPA_RSAeEDEmMT6/exec",
+  "Precinct 4A" : "https://script.google.com/macros/s/AKfycbyp66Q0OS6K26ukhx89VI0dEBI6AlGqXdJI9iVmMiEpMLvWAl4xE6kKiSLKgpO7yrUDPw/exec",
+  "Precinct 5"  : "https://script.google.com/macros/s/AKfycbzaXX9qhoa796_tNdkEvLH38BSVyEckHwARZtyxTVMzeaAulAae1bm50TElJyHvjqD7xQ/exec",
+  "Precinct 6"  : "https://script.google.com/macros/s/AKfycbwiHi7G8GRTZUD0nndD0cxuWVIT-VYtEjA5WtJR9TDCSX7oGuP97EBRnYES0-QX_f1Jwg/exec",
+  "Precinct 7"  : "https://script.google.com/macros/s/AKfycbwFytj4PoOVAlHFs9rYJlWFxZyYvzJhyES0SLY53Ixnpsn7TOnCdQaVpKNeTmHSdyy4/exec",
+  "Precinct 8"  : "https://script.google.com/macros/s/AKfycbwDrdPnCgb-BRYm5ZkjWpm4J8gHxeNVtGtXXDgWScu6jPut76htZj4uClBENEe8QNqLsA/exec",
+  "Precinct 9"  : "https://script.google.com/macros/s/AKfycbzBk0fJTkBzB-WYfkiHEgP8Je__g63SQXO1zIu98IVP--Vr83zo5eeewQ7oMS6o9VGtmQ/exec",
+  "Precinct 10" : "https://script.google.com/macros/s/AKfycbxuknA4FYBH69WTkApX_80gOYmvzW9dmMiQllmaIxvKQDokXM3HDYiOTEJ1hwurmVut/exec"
 }
