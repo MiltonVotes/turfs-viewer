@@ -8,75 +8,82 @@
   <link rel="stylesheet" href="https://unpkg.com/leaflet-extra-markers/dist/css/leaflet.extra-markers.min.css" />
   <style>
     #map { height: 80vh; }
-    #precinct-toggle-container, #view-toggle { margin: 10px; }
+    #precinct-toggle-container {
+      position: absolute; top: 10px; left: 10px; background: white;
+      border: 1px solid #ccc; padding: 10px; z-index: 1001; max-width: 200px;
+      box-shadow: 0 0 5px rgba(0,0,0,0.3); font-family: Arial, sans-serif;
+    }
+    #precinct-toggle-container summary {
+      font-weight: bold; cursor: pointer;
+    }
     #precinct-toggle-container button {
-      margin: 2px;
-      padding: 5px 10px;
-      border: 1px solid #999;
-      background: #eee;
-      cursor: pointer;
+      display: block; margin: 5px 0; padding: 5px 10px;
+      border: 1px solid #999; background: #eee; cursor: pointer; width: 100%;
+      text-align: left;
     }
     #precinct-toggle-container button.active {
-      background: #4CAF50;
-      color: white;
+      background: #4CAF50; color: white;
     }
+
+    #view-toggle { margin: 10px; position: absolute; top: 10px; right: 10px; z-index: 1001; }
 
     #modal {
       position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
       background: white; padding: 20px; border: 2px solid black; display: none;
-      z-index: 1000; max-width: 90%; box-shadow: 0 0 10px rgba(0,0,0,0.5);
+      z-index: 1002; max-width: 90%; box-shadow: 0 0 10px rgba(0,0,0,0.5);
       font-family: 'Courier New', monospace;
     }
-    .modal-field {
-      margin: 5px 0;
-      display: flex;
-      align-items: center;
-    }
+    .modal-field { margin: 5px 0; display: flex; align-items: center; }
     .modal-field b { display: inline-block; width: 130px; }
     .modal-buttons { display: flex; justify-content: space-between; margin-top: 10px; }
     .modal-buttons button { padding: 10px 20px; font-size: 16px; }
     select, input[type="text"], textarea { font-size: 14px; flex: 1; }
     textarea { resize: vertical; height: 60px; }
 
+    #legend {
+      position: absolute; top: 10px; right: 10px; background: white; padding: 10px;
+      border: 1px solid #ccc; font-size: 14px; font-family: Arial, sans-serif;
+      box-shadow: 0 0 5px rgba(0,0,0,0.3); z-index: 1001;
+    }
+    .legend-item { display: flex; align-items: center; margin-bottom: 5px; }
+    .legend-icon { width: 20px; height: 20px; margin-right: 8px; }
+
     #log {
       padding: 10px; background: #f0f0f0; border-top: 1px solid #ccc;
       font-family: monospace; max-height: 20vh; overflow-y: auto;
     }
-
-    #table-view { display: none; margin: 10px; overflow-x: auto; }
-    table { border-collapse: collapse; width: 100%; }
-    th, td { border: 1px solid #ccc; padding: 5px; font-family: monospace; font-size: 13px; }
-    tr:hover { background-color: #f0f0f0; cursor: pointer; }
-
-    .row-blue { background-color: #e6f0ff; }
-    .row-blue-dot { background-color: #d0e0ff; }
-    .row-green { background-color: #e0ffe0; }
-    .row-red { background-color: #ffe0e0; }
-    .row-yellow { background-color: #fff9cc; }
-    .row-purple { background-color: #f2e6ff; }
-    .row-gray { background-color: #eeeeee; }
   </style>
 </head>
 <body>
-  <div id="precinct-toggle-container"></div>
+  <details id="precinct-toggle-container" open>
+    <summary>Precincts</summary>
+    <!-- Toggle buttons injected here -->
+  </details>
   <button id="view-toggle">View: Map</button>
+
   <div id="map"></div>
-  <div id="table-view"><table id="data-table"></table></div>
+
+  <!-- Legend -->
+  <div id="legend">
+    <details open>
+      <summary><b>Legend</b></summary>
+      <div class="legend-item"><img class="legend-icon" src="https://maps.google.com/mapfiles/ms/icons/blue.png"> Not Visited</div>
+      <div class="legend-item"><img class="legend-icon" src="https://maps.google.com/mapfiles/ms/icons/green.png"> Supports</div>
+      <!-- Add more statuses as needed -->
+    </details>
+  </div>
 
   <!-- Modal -->
   <div id="modal">
     <div id="card-content"></div>
     <div class="modal-field">
-      <b>Phone:</b>
-      <input type="text" id="phone-input" />
+      <b>Phone:</b><input type="text" id="phone-input" />
     </div>
     <div class="modal-field">
-      <b>Email:</b>
-      <input type="text" id="email-input" />
+      <b>Email:</b><input type="text" id="email-input" />
     </div>
     <div class="modal-field">
-      <b>Notes:</b>
-      <textarea id="notes-input"></textarea>
+      <b>Notes:</b><textarea id="notes-input"></textarea>
     </div>
     <div class="modal-buttons">
       <button id="close-btn">Close</button>
@@ -92,123 +99,68 @@
     const map = L.map('map').setView([42.25, -71.07], 13);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 
-    let allMarkers = [], markerMap = new Map(), precinctMarkers = new Map();
-    let currentData = [], currentVoter = null, currentSheetUrl = null;
+    let precinctButtons = {};
+    let allMarkers = [], precinctMarkers = {};
+    let currentVoter = null;
 
-    function jitter(coord, amount = 0.0001) {
-      return coord + (Math.random() * 2 - 1) * amount;
-    }
-    function log(msg) {
-      const el = document.getElementById('log');
-      el.innerText += `\n${msg}`;
-      el.scrollTop = el.scrollHeight;
-    }
-    function getColor(visitStatus, supportStatus) {
-      if (visitStatus === 'Not Visited') return 'blue';
-      if (visitStatus === 'No Answer') return 'blue-dot';
-      if (visitStatus === 'Spoke to Someone') {
-        switch (supportStatus) {
-          case 'Supports': return 'green';
-          case 'Declined': return 'red';
-          case 'Unsure': return 'yellow';
-          case 'Already Involved': return 'purple';
-          default: return 'blue-dot';
-        }
-      }
-      return 'gray';
-    }
+    const precincts = ['Precinct 1', 'Precinct 2', 'Precinct 3']; // replace with real list
 
-    function createIcon(voter) {
-      const isStar = (voter.Voted_Town || '').startsWith('25');
-      const num = voter.Num_Voters || '';
-      return L.ExtraMarkers.icon({
-        icon: 'fa-number',
-        number: num,
-        shape: isStar ? 'star' : 'circle',
-        markerColor: 'blue',
-        prefix: 'fa'
-      });
-    }
-
-    async function loadSheets() {
-      const resp = await fetch('sheets_urls.json');
-      const urls = await resp.json();
-      log("Loaded sheets config");
-      const data = await fetch(urls["Default"]).then(res => res.json());
-      currentData = data;
-
-      const precincts = [...new Set(data.map(d => d.Precinct))].sort();
-      const toggleContainer = document.getElementById('precinct-toggle-container');
-      precincts.forEach(p => {
-        const btn = document.createElement('button');
-        btn.textContent = p;
-        btn.onclick = () => togglePrecinct(p, btn);
-        toggleContainer.appendChild(btn);
-      });
-
-      const table = document.getElementById('data-table');
-      const header = document.createElement('tr');
-      const keys = ['Voter_ID','Name','Address','Age','Party','Occupation','Precinct','Turf','Voted_Town','Voted_MBTA','Voted_State','Num_Voters','Phone','Email','Visit_Status','Support_Status','Notes'];
-      keys.forEach(k => {
-        const th = document.createElement('th');
-        th.textContent = k;
-        header.appendChild(th);
-      });
-      table.appendChild(header);
-
-      data.forEach(voter => {
-        const row = document.createElement('tr');
-        row.onclick = () => showModal(voter);
-        const color = getColor(voter.Visit_Status, voter.Support_Status);
-        row.classList.add(`row-${color}`);
-        keys.forEach(k => {
-          const td = document.createElement('td');
-          td.textContent = voter[k] || '';
-          row.appendChild(td);
-        });
-        table.appendChild(row);
-      });
-
-      log(`Loaded ${data.length} voters`);
-    }
+    precincts.forEach(p => {
+      const btn = document.createElement('button');
+      btn.textContent = p;
+      btn.onclick = () => togglePrecinct(p, btn);
+      document.querySelector('#precinct-toggle-container').appendChild(btn);
+      precinctButtons[p] = btn;
+      precinctMarkers[p] = [];
+    });
 
     function togglePrecinct(precinct, btn) {
       if (btn.classList.contains('active')) {
+        precinctMarkers[precinct].forEach(m => map.removeLayer(m));
         btn.classList.remove('active');
-        (precinctMarkers.get(precinct) || []).forEach(m => map.removeLayer(m));
       } else {
+        precinctMarkers[precinct].forEach(m => map.addLayer(m));
         btn.classList.add('active');
-        const voters = currentData.filter(d => d.Precinct === precinct);
-        const markers = voters.map(voter => {
-          const lat = jitter(parseFloat(voter.Latitude));
-          const lng = jitter(parseFloat(voter.Longitude));
-          if (isNaN(lat) || isNaN(lng)) return null;
-          const marker = L.marker([lat, lng], { icon: createIcon(voter) }).addTo(map);
-          marker.voterData = voter;
-          marker.on('click', () => showModal(voter));
-          markerMap.set(voter.Row, marker);
-          return marker;
-        }).filter(Boolean);
-        precinctMarkers.set(precinct, markers);
       }
+    }
+
+    function makeMarker(voter) {
+      let shape = voter.Voted_Town && voter.Voted_Town.startsWith('25') ? 'star' : 'circle';
+      let color = 'blue'; // your logic for color
+      let label = voter.Num_Voters || '';
+
+      const icon = L.ExtraMarkers.icon({
+        icon: 'fa-number',
+        number: label,
+        markerColor: color,
+        shape: shape
+      });
+
+      return L.marker([voter.Latitude, voter.Longitude], { icon }).on('click', () => showModal(voter));
     }
 
     function showModal(voter) {
       currentVoter = { ...voter };
       const fields = [
-        { key: 'Voter_ID', label: 'Voter ID' },
-        { key: 'Name' }, { key: 'Address' }, { key: 'Age' },
-        { key: 'Party' }, { key: 'Occupation' }, { key: 'Precinct' }, { key: 'Turf' },
-        { key: 'Voted_Town', label: 'Town Votes' },
-        { key: 'Voted_MBTA', label: 'MBTA' },
-        { key: 'Voted_State', label: 'State Votes' },
-        { key: 'Num_Voters', label: 'Household' }
+        { k: 'Voter_ID', label: 'Voter ID' },
+        { k: 'Name', label: 'Name' },
+        { k: 'Address', label: 'Address' },
+        { k: 'Age', label: 'Age' },
+        { k: 'Party', label: 'Party' },
+        { k: 'Occupation', label: 'Occupation' },
+        { k: 'Precinct', label: 'Precinct' },
+        { k: 'Turf', label: 'Turf' },
+        { k: 'Voted_Town', label: 'Town Votes' },
+        { k: 'Voted_MBTA', label: 'MBTA' },
+        { k: 'Voted_State', label: 'State Votes' },
+        { k: 'Num_Voters', label: 'Household' }
       ];
       document.getElementById('card-content').innerHTML =
-        fields.map(f => `<div class="modal-field"><b>${f.label || f.key}:</b> ${voter[f.key] || ''}</div>`).join('');
+        fields.map(f => `<div class="modal-field"><b>${f.label}:</b> ${voter[f.k] || ''}</div>`).join('');
       document.getElementById('phone-input').value = voter.Phone || '';
       document.getElementById('email-input').value = voter.Email || '';
       document.getElementById('notes-input').value = voter.Notes || '';
+      document.getElementById('modal').style.display = 'block';
     }
 
     document.getElementById('save-btn').onclick = async () => {
@@ -216,21 +168,15 @@
       currentVoter.Phone = document.getElementById('phone-input').value;
       currentVoter.Email = document.getElementById('email-input').value;
       currentVoter.Notes = document.getElementById('notes-input').value;
-      log("Would POST updated data: " + JSON.stringify(currentVoter));
-      hideModal();
+
+      console.log("Would POST updated voter:", currentVoter);
+
+      document.getElementById('modal').style.display = 'none';
     };
 
-    function hideModal() { document.getElementById('modal').style.display = 'none'; }
-    document.getElementById('close-btn').onclick = hideModal;
-
-    document.getElementById('view-toggle').onclick = () => {
-      const m = document.getElementById('map'), t = document.getElementById('table-view');
-      const b = document.getElementById('view-toggle');
-      if (m.style.display === 'none') { m.style.display = 'block'; t.style.display = 'none'; b.textContent = 'View: Map'; }
-      else { m.style.display = 'none'; t.style.display = 'block'; b.textContent = 'View: Rows'; }
+    document.getElementById('close-btn').onclick = () => {
+      document.getElementById('modal').style.display = 'none';
     };
-
-    loadSheets();
   </script>
 </body>
 </html>
