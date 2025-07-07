@@ -17,15 +17,13 @@
       z-index: 1000; max-width: 90%; box-shadow: 0 0 10px rgba(0,0,0,0.5);
       font-family: 'Courier New', monospace;
     }
-    .modal-field {
-      margin: 5px 0; display: flex; align-items: center;
-    }
+    .modal-field { margin: 5px 0; display: flex; align-items: center; }
     .modal-field b { display: inline-block; width: 130px; }
     .modal-buttons { display: flex; justify-content: space-between; margin-top: 10px; }
     select, input[type="text"], textarea { font-size: 14px; flex: 1; }
     #log {
       padding: 10px; background: #f0f0f0; border-top: 1px solid #ccc;
-      font-family: monospace; max-height: 20vh; overflow-y: auto;
+      font-family: monospace; max-height: 20vh; overflow-y: auto; white-space: pre-wrap;
     }
     #legend {
       position: absolute; top: 10px; right: 10px; background: white;
@@ -34,6 +32,12 @@
     }
     .legend-item { display: flex; align-items: center; margin-bottom: 5px; }
     .legend-icon { width: 20px; height: 20px; margin-right: 8px; }
+    #precinct-controls {
+      position: absolute; top: 10px; left: 10px; background: white; padding: 10px;
+      border: 1px solid #ccc; box-shadow: 0 0 5px rgba(0,0,0,0.3); z-index: 1001;
+      font-size: 14px; font-family: Arial, sans-serif;
+    }
+    #precinct-toggles button { margin: 2px; }
     #table-view { display: none; margin: 10px; overflow-x: auto; }
     table { border-collapse: collapse; width: 100%; }
     th, td { border: 1px solid #ccc; padding: 5px; font-family: monospace; font-size: 13px; }
@@ -42,13 +46,16 @@
     .row-green { background-color: #e0ffe0; } .row-red { background-color: #ffe0e0; }
     .row-yellow { background-color: #fff9cc; } .row-purple { background-color: #f2e6ff; }
     .row-gray { background-color: #eeeeee; }
-    #precinct-toggles { margin: 10px; }
-    #precinct-toggles button { margin: 2px; }
   </style>
 </head>
 <body>
   <div id="controls">
-    <div id="precinct-toggles"></div>
+    <div id="precinct-controls">
+      <details open>
+        <summary><b>Precincts</b></summary>
+        <div id="precinct-toggles"></div>
+      </details>
+    </div>
     <button id="view-toggle">View: Map</button>
   </div>
   <div id="map"></div>
@@ -66,6 +73,7 @@
     </details>
   </div>
 
+  <!-- Modal -->
   <div id="modal">
     <div id="card-content"></div>
     <div class="modal-field">
@@ -110,28 +118,20 @@
     const map = L.map('map').setView([42.25, -71.07], 13);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 
-    let precinctUrls = {}, toggledPrecincts = {}, markersByPrecinct = {}, rowsByPrecinct = {};
-    let allMarkers = [], currentVoter = null, markerMap = new Map();
-
-    function log(msg) {
-      const el = document.getElementById('log');
-      el.innerText += `\n${msg}`; el.scrollTop = el.scrollHeight;
-    }
+    let precinctUrls = {}, toggledPrecincts = {}, markersByPrecinct = {}, rowsByPrecinct = {}, markerMap = new Map();
+    function log(msg) { const el = document.getElementById('log'); el.innerText += `\n${msg}`; el.scrollTop = el.scrollHeight; }
 
     function getColor(visit, support) {
       if (visit === 'Not Visited') return 'blue';
       if (visit === 'No Answer') return 'blue-dot';
       if (visit === 'Spoke to Someone') {
-        switch (support) {
-          case 'Supports': return 'green'; case 'Declined': return 'red';
-          case 'Unsure': return 'yellow'; case 'Already Involved': return 'purple';
-        } return 'blue-dot';
+        switch (support) { case 'Supports': return 'green'; case 'Declined': return 'red'; case 'Unsure': return 'yellow'; case 'Already Involved': return 'purple'; } return 'blue-dot';
       } return 'gray';
     }
 
     function createMarker(voter) {
       const color = getColor(voter.Visit_Status, voter.Support_Status);
-      const iconType = voter.Voted_Town.startsWith('25') ? 'star' : 'circle';
+      const iconType = voter.Voted_Town?.startsWith('25') ? 'star' : 'circle';
       const icon = L.ExtraMarkers.icon({
         icon: 'fa-number',
         number: voter.Num_Voters || '',
@@ -162,54 +162,39 @@
     async function togglePrecinct(label, btn) {
       if (toggledPrecincts[label]) {
         toggledPrecincts[label] = false; btn.style.background = '';
-        markersByPrecinct[label]?.forEach(m => map.removeLayer(m));
-        removeRows(label); return;
+        markersByPrecinct[label]?.forEach(m => map.removeLayer(m)); delete markersByPrecinct[label]; delete rowsByPrecinct[label];
+        log(`Deselected ${label}`);
+        updateTable(); return;
       }
-      toggledPrecincts[label] = true; btn.style.background = '#ccc';
+      toggledPrecincts[label] = true; btn.style.background = '#ccc'; log(`Loading ${label}`);
       const url = precinctUrls[label];
       const data = await fetch(url).then(r => r.json());
       const markers = data.map(v => createMarker(v)).filter(m => m);
-      markersByPrecinct[label] = markers;
-      rowsByPrecinct[label] = data;
+      markersByPrecinct[label] = markers; rowsByPrecinct[label] = data;
+      log(`Fetched ${data.length} rows for ${label}`);
       updateTable();
     }
 
     function updateTable() {
-      const table = document.getElementById('data-table');
-      table.innerHTML = '';
-      const keys = ['Voter_ID','Name','Address','Age','Party','Occupation','Precinct',
-        'Turf','Voted_Town','Voted_MBTA','Voted_State','Num_Voters',
-        'Phone','Email','Visit_Status','Support_Status'];
-      const header = document.createElement('tr');
-      keys.forEach(k => { const th = document.createElement('th'); th.textContent = k; header.appendChild(th); });
-      table.appendChild(header);
+      const table = document.getElementById('data-table'); table.innerHTML = '';
+      const keys = ['Voter_ID','Name','Address','Age','Party','Occupation','Precinct','Turf','Voted_Town','Voted_MBTA','Voted_State','Num_Voters','Phone','Email','Visit_Status','Support_Status'];
+      const header = document.createElement('tr'); keys.forEach(k => { const th = document.createElement('th'); th.textContent = k; header.appendChild(th); }); table.appendChild(header);
       for (const label in toggledPrecincts) {
         if (!toggledPrecincts[label]) continue;
         rowsByPrecinct[label]?.forEach(voter => {
           const row = document.createElement('tr');
           row.onclick = () => showModal(voter);
           row.classList.add(`row-${getColor(voter.Visit_Status, voter.Support_Status)}`);
-          keys.forEach(k => {
-            const td = document.createElement('td'); td.textContent = voter[k] || ''; row.appendChild(td);
-          });
+          keys.forEach(k => { const td = document.createElement('td'); td.textContent = voter[k] || ''; row.appendChild(td); });
           table.appendChild(row);
         });
       }
     }
 
-    function removeRows(label) {
-      updateTable();
-      markersByPrecinct[label]?.forEach(m => map.removeLayer(m));
-    }
-
     function showModal(voter) {
       currentVoter = { ...voter };
-      const fields = [
-        ['Voter_ID','Voter ID'], ['Name','Name'], ['Address','Address'], ['Age','Age'],
-        ['Party','Party'], ['Occupation','Occupation'], ['Precinct','Precinct'],
-        ['Turf','Turf'], ['Voted_Town','Town Votes'], ['Voted_MBTA','MBTA'],
-        ['Voted_State','State Votes'], ['Num_Voters','Household']
-      ];
+      const fields = [['Voter_ID','Voter ID'], ['Name','Name'], ['Address','Address'], ['Age','Age'], ['Party','Party'], ['Occupation','Occupation'], ['Precinct','Precinct'],
+        ['Turf','Turf'], ['Voted_Town','Town Votes'], ['Voted_MBTA','MBTA'], ['Voted_State','State Votes'], ['Num_Voters','Household']];
       const html = fields.map(([k,lbl]) => `<div class="modal-field"><b>${lbl}:</b> ${voter[k]||''}</div>`).join('');
       document.getElementById('card-content').innerHTML = html;
       document.getElementById('phone-input').value = voter.Phone || '';
@@ -221,19 +206,16 @@
     }
 
     document.getElementById('close-btn').onclick = () => { document.getElementById('modal').style.display = 'none'; };
-    document.getElementById('save-btn').onclick = async () => {
+    document.getElementById('save-btn').onclick = () => {
       currentVoter.Phone = document.getElementById('phone-input').value;
       currentVoter.Email = document.getElementById('email-input').value;
       currentVoter.Notes = document.getElementById('notes-input').value;
       currentVoter.Visit_Status = document.getElementById('visit-status').value;
       currentVoter.Support_Status = document.getElementById('support-status').value;
       const color = getColor(currentVoter.Visit_Status, currentVoter.Support_Status);
-      markerMap.get(currentVoter.Row)?.setIcon(L.ExtraMarkers.icon({
-        icon: 'fa-number', number: currentVoter.Num_Voters || '', markerColor: color,
-        shape: currentVoter.Voted_Town.startsWith('25') ? 'star' : 'circle'
-      }));
-      updateTable();
-      document.getElementById('modal').style.display = 'none';
+      const iconType = currentVoter.Voted_Town.startsWith('25') ? 'star' : 'circle';
+      markerMap.get(currentVoter.Row)?.setIcon(L.ExtraMarkers.icon({ icon: 'fa-number', number: currentVoter.Num_Voters || '', markerColor: color, shape: iconType }));
+      updateTable(); log(`Updated row: ${currentVoter.Voter_ID}`); document.getElementById('modal').style.display = 'none';
     };
 
     document.getElementById('view-toggle').onclick = () => {
