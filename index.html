@@ -42,10 +42,10 @@
       position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
       background: white; padding: 20px; border: 2px solid black; display: none;
       z-index: 2000; max-width: 90%; box-shadow: 0 0 10px rgba(0,0,0,0.5);
+      font-family: 'Courier New', monospace; font-size: 12pt;
     }
     .modal-field {
       margin: 5px 0; display: flex; align-items: center;
-      font-family: 'Courier New', monospace; font-size: 12pt;
     }
     .modal-field b { display: inline-block; width: 150px; }
     .modal-buttons { display: flex; justify-content: space-between; margin-top: 10px; }
@@ -114,7 +114,7 @@
     const map = L.map('map').setView([42.25, -71.07], 13);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 
-    let allMarkers = [], markerMap = new Map(), currentData = {}, selectedPrecincts = {}, currentVoter = null;
+    let allMarkers = [], markerMap = new Map(), currentData = {}, selectedPrecincts = {}, currentVoter = null, sheetsUrls = {};
 
     function jitter(coord) { return coord + (Math.random() * 2 - 1) * 0.0001; }
     function log(msg) { const el = document.getElementById('log'); el.innerText += `\n${msg}`; el.scrollTop = el.scrollHeight; }
@@ -148,9 +148,9 @@
 
     async function loadPrecincts() {
       const resp = await fetch('sheets_urls.json');
-      const urls = await resp.json();
+      sheetsUrls = await resp.json();
       const toggles = document.getElementById('precinct-toggles');
-      Object.entries(urls).forEach(([label, url]) => {
+      Object.entries(sheetsUrls).forEach(([label, url]) => {
         const btn = document.createElement('button');
         btn.textContent = label;
         btn.onclick = async () => {
@@ -225,14 +225,18 @@
       currentVoter.Support_Status = document.getElementById('support-status').value;
       currentVoter.Notes = document.getElementById('notes-input').value;
 
+      const precinctUrl = sheetsUrls[currentVoter.Precinct];
       log("Saving: " + JSON.stringify(currentVoter));
-      const res = await fetch(currentSheetUrl, { method: 'POST', body: JSON.stringify(currentVoter), headers: { 'Content-Type': 'text/plain' } });
+      await fetch(precinctUrl, { method: 'POST', body: JSON.stringify(currentVoter), headers: { 'Content-Type': 'text/plain' } });
+
       const marker = markerMap.get(currentVoter.Voter_ID);
       if (marker) marker.setIcon(getIcon(currentVoter));
+
       Object.entries(currentData).forEach(([p, list]) => {
         const idx = list.findIndex(v => v.Voter_ID === currentVoter.Voter_ID);
         if (idx !== -1) list[idx] = { ...currentVoter };
       });
+
       renderRows();
       document.getElementById('modal').style.display = 'none';
     };
