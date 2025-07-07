@@ -5,6 +5,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet-extra-markers/1.0.6/css/leaflet.extra-markers.min.css"/>
   <style>
     body { font-family: Arial, sans-serif; }
     #controls { margin: 10px; }
@@ -18,10 +19,17 @@
     th, td { border: 1px solid #ccc; padding: 5px; font-family: monospace; font-size: 13px; }
     tr:hover { background: #f0f0f0; cursor: pointer; }
 
-    #log {
-      padding: 10px; background: #f9f9f9; border-top: 1px solid #ccc;
-      font-family: monospace; max-height: 20vh; overflow-y: auto;
+    #modal {
+      position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+      background: white; padding: 20px; border: 2px solid black; display: none;
+      z-index: 1000; max-width: 90%; box-shadow: 0 0 10px rgba(0,0,0,0.5);
+      font-family: monospace;
     }
+    .modal-field { margin: 5px 0; display: flex; align-items: center; }
+    .modal-field b { display: inline-block; width: 130px; }
+    .modal-buttons { display: flex; justify-content: space-between; margin-top: 10px; }
+    .modal-buttons button { padding: 10px 20px; font-size: 16px; }
+    #notes-input { width: 100%; font-family: monospace; }
 
     #legend {
       position: absolute; top: 10px; right: 10px; background: white;
@@ -33,6 +41,11 @@
     }
     .legend-icon {
       width: 20px; height: 20px; margin-right: 8px;
+    }
+
+    #log {
+      padding: 10px; background: #f9f9f9; border-top: 1px solid #ccc;
+      font-family: monospace; max-height: 20vh; overflow-y: auto;
     }
   </style>
 </head>
@@ -49,6 +62,20 @@
   <div id="map"></div>
   <div id="table-view"><table id="data-table"></table></div>
 
+  <!-- Modal Dialog -->
+  <div id="modal">
+    <div id="card-content"></div>
+    <div class="modal-field">
+      <b>Notes:</b>
+      <textarea id="notes-input" rows="3"></textarea>
+    </div>
+    <div class="modal-buttons">
+      <button id="close-btn">Close</button>
+      <button id="save-btn">Save</button>
+    </div>
+  </div>
+
+  <!-- Legend -->
   <div id="legend">
     <details open>
       <summary><b>Legend</b></summary>
@@ -64,6 +91,7 @@
   <div id="log"></div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet-extra-markers/1.0.6/js/leaflet.extra-markers.min.js"></script>
   <script>
     const map = L.map('map').setView([42.25, -71.07], 13);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
@@ -72,6 +100,7 @@
     let toggledPrecincts = {};
     let markersByPrecinct = {};
     let rowsByPrecinct = {};
+    let currentVoter = null;
 
     function log(msg) {
       const el = document.getElementById('log');
@@ -100,58 +129,59 @@
       const lng = parseFloat(voter.Longitude);
       if (isNaN(lat) || isNaN(lng)) return null;
 
-      const color = getColor(voter.Visit_Status, voter.Support_Status);
-      const marker = L.marker([lat, lng], {
-        icon: L.icon({
-          iconUrl: `https://maps.google.com/mapfiles/ms/icons/${color}.png`,
-          iconSize: [32, 32], iconAnchor: [16, 32]
-        })
-      }).addTo(map);
-      marker.voterData = voter;
+      const iconType = voter.Voted_Town?.startsWith('25') ? 'star' : 'circle';
+      const iconColor = getColor(voter.Visit_Status, voter.Support_Status);
+      const markerIcon = L.ExtraMarkers.icon({
+        icon: 'fa-number',
+        number: voter.Num_Voters || '',
+        markerColor: iconColor,
+        shape: iconType,
+        prefix: 'fa'
+      });
+
+      const marker = L.marker([lat, lng], { icon: markerIcon }).addTo(map);
       marker.on('click', () => showModal(voter));
       return marker;
     }
 
-    async function togglePrecinct(label, btn) {
-      if (toggledPrecincts[label]) {
-        toggledPrecincts[label] = false; btn.style.background = '';
-        markersByPrecinct[label]?.forEach(m => map.removeLayer(m));
-        delete markersByPrecinct[label]; delete rowsByPrecinct[label];
-        log(`Deselected ${label} — removed markers and rows.`);
-        updateTable();
-        return;
-      }
-
-      toggledPrecincts[label] = true; btn.style.background = '#ccc';
-      const url = precinctUrls[label];
-      log(`Fetching sheet data for ${label} from: ${url}`);
-
-      try {
-        const data = await fetch(url).then(r => r.json());
-        log(`Fetched ${data.length} voters for ${label}`);
-        const markers = data.map(v => createMarker(v)).filter(m => m);
-        markersByPrecinct[label] = markers;
-        rowsByPrecinct[label] = data;
-        log(`Placed ${markers.length} markers for ${label}`);
-        updateTable();
-      } catch (err) {
-        log(`Fetch error for ${label}: ${err}`);
-        alert(`Could not load sheet for ${label}.`);
-        toggledPrecincts[label] = false; btn.style.background = '';
-      }
+    function showModal(voter) {
+      currentVoter = voter;
+      const displayFields = [
+        ['Voter_ID','Voter ID'], ['Name','Name'], ['Address','Address'],
+        ['Age','Age'], ['Party','Party'], ['Occupation','Occupation'],
+        ['Precinct','Precinct'], ['Turf','Turf'],
+        ['Voted_Town','Town Votes'], ['Voted_MBTA','MBTA'],
+        ['Voted_State','State Votes'], ['Num_Voters','Household'],
+        ['Visit_Status','Visited'], ['Support_Status','Supports']
+      ];
+      const html = displayFields.map(([key,label]) => `<div class="modal-field"><b>${label}:</b> ${voter[key] || ''}</div>`).join('');
+      document.getElementById('card-content').innerHTML = html;
+      document.getElementById('notes-input').value = voter.Notes || '';
+      document.getElementById('modal').style.display = 'block';
     }
+
+    document.getElementById('close-btn').onclick = () => {
+      document.getElementById('modal').style.display = 'none';
+    };
+
+    document.getElementById('save-btn').onclick = () => {
+      if (!currentVoter) return;
+      currentVoter.Notes = document.getElementById('notes-input').value;
+      log(`Would POST updated Notes: ${currentVoter.Notes}`);
+      document.getElementById('modal').style.display = 'none';
+    };
 
     function updateTable() {
       const table = document.getElementById('data-table');
       table.innerHTML = '';
-      const keys = ['Voter_ID','Name','Address','Age','Party','Occupation','Precinct','Turf'];
+      const rows = Object.values(rowsByPrecinct).flat();
+      if (rows.length === 0) return;
+      const keys = Object.keys(rows[0]);
       const header = document.createElement('tr');
-      keys.forEach(k => {
-        const th = document.createElement('th'); th.textContent = k; header.appendChild(th);
-      });
+      keys.forEach(k => { const th = document.createElement('th'); th.textContent = k; header.appendChild(th); });
       table.appendChild(header);
 
-      Object.values(rowsByPrecinct).flat().forEach(voter => {
+      rows.forEach(voter => {
         const row = document.createElement('tr');
         row.onclick = () => showModal(voter);
         keys.forEach(k => {
@@ -163,16 +193,39 @@
       });
     }
 
+    async function togglePrecinct(label, btn) {
+      if (toggledPrecincts[label]) {
+        toggledPrecincts[label] = false; btn.style.background = '';
+        markersByPrecinct[label]?.forEach(m => map.removeLayer(m));
+        delete markersByPrecinct[label]; delete rowsByPrecinct[label];
+        log(`Deselected ${label} — removed markers/rows.`);
+        updateTable();
+        return;
+      }
+      toggledPrecincts[label] = true; btn.style.background = '#ccc';
+      const url = precinctUrls[label];
+      log(`Fetching sheet data for ${label} from: ${url}`);
+      try {
+        const data = await fetch(url).then(r => r.json());
+        log(`Fetched ${data.length} rows for ${label}`);
+        const markers = data.map(v => createMarker(v)).filter(Boolean);
+        markersByPrecinct[label] = markers;
+        rowsByPrecinct[label] = data;
+        updateTable();
+      } catch (err) {
+        log(`Fetch error for ${label}: ${err}`);
+        toggledPrecincts[label] = false; btn.style.background = '';
+      }
+    }
+
     document.getElementById('view-toggle').onclick = () => {
       const mapDiv = document.getElementById('map');
       const tableDiv = document.getElementById('table-view');
       const btn = document.getElementById('view-toggle');
       if (mapDiv.style.display === 'none') {
-        mapDiv.style.display = 'block'; tableDiv.style.display = 'none';
-        btn.textContent = 'View: Map';
+        mapDiv.style.display = 'block'; tableDiv.style.display = 'none'; btn.textContent = 'View: Map';
       } else {
-        mapDiv.style.display = 'none'; tableDiv.style.display = 'block';
-        btn.textContent = 'View: Rows';
+        mapDiv.style.display = 'none'; tableDiv.style.display = 'block'; btn.textContent = 'View: Rows';
       }
     };
 
@@ -180,7 +233,6 @@
       const resp = await fetch('sheets_urls.json');
       const urls = await resp.json();
       precinctUrls = urls;
-
       const container = document.getElementById('precinct-buttons');
       Object.entries(urls).forEach(([label]) => {
         const btn = document.createElement('button');
