@@ -203,14 +203,15 @@
           prefix: 'fa'
         });
 
+        const iconEl = icon.createIcon(); // this is a DOM element
+
         const div = document.createElement('div');
         div.className = 'legend-item';
 
-        const img = icon.createIcon();
-        img.className = 'legend-icon';
+        iconEl.style.marginRight = '8px'; // optional tweak for spacing
 
-        div.appendChild(img);
-        div.appendChild(document.createTextNode(` ${item.label}`));
+        div.appendChild(iconEl);
+        div.appendChild(document.createTextNode(item.label));
         container.appendChild(div);
       });
     }
