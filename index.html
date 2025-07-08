@@ -30,8 +30,8 @@
       margin-bottom: 5px;
     }
     .legend-icon {
-      width: 20px;
-      height: 20px;
+      width: 32px;
+      height: 32px;
       margin-right: 8px;
     }
     #map { height: 70vh; }
@@ -180,7 +180,35 @@
       });
     }
 
-    function buildExtraMarkersLegend() {
+    function buildStaticLegend() {
+      const items = [
+        { label: "Not Visited", icon: "marker-icon-blue.png" },
+        { label: "No Answer", icon: "marker-icon-blue.png" },
+        { label: "Supports", icon: "marker-icon-green.png" },
+        { label: "Declined", icon: "marker-icon-red.png" },
+        { label: "Unsure", icon: "marker-icon-yellow.png" },
+        { label: "Already Involved", icon: "marker-icon-purple.png" },
+        { label: "Voted 2025", icon: "marker-icon-blue-star.png" }
+      ];
+
+      const container = document.getElementById('legend-items');
+      container.innerHTML = '';
+
+      items.forEach(item => {
+        const div = document.createElement('div');
+        div.className = 'legend-item';
+
+        const img = document.createElement('img');
+        img.className = 'legend-icon';
+        img.src = `https://cdn.rawgit.com/coryasilva/Leaflet.ExtraMarkers/master/img/${item.icon}`;
+        div.appendChild(img);
+
+        div.appendChild(document.createTextNode(item.label));
+        container.appendChild(div);
+      });
+    }
+
+    function buildExtraMarkersLegendORIG() {
       const legendItems = [
         { label: "Not Visited", color: "blue", shape: "circle" },
         { label: "No Answer", color: "blue", shape: "circle" },
