@@ -214,7 +214,8 @@
       precinctMarkers[name] = [];
 
       data.forEach(v => {
-        v.Precinct = name;
+//        v.Precinct = name;
+        v.Precinct = name.replace('Precinct ', '');
         const lat = jitter(parseFloat(v.Latitude)), lng = jitter(parseFloat(v.Longitude));
         if (isNaN(lat) || isNaN(lng)) return;
         const marker = L.marker([lat, lng], { icon: getIcon(v) }).addTo(map);
