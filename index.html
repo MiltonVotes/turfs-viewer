@@ -214,8 +214,8 @@
       precinctMarkers[name] = [];
 
       data.forEach(v => {
-//        v.Precinct = name;
         v.Precinct = name.replace('Precinct ', '');
+//        v.Precinct = name;
         const lat = jitter(parseFloat(v.Latitude)), lng = jitter(parseFloat(v.Longitude));
         if (isNaN(lat) || isNaN(lng)) return;
         const marker = L.marker([lat, lng], { icon: getIcon(v) }).addTo(map);
@@ -287,7 +287,9 @@
       currentVoter.Visit_Status = document.getElementById('visit-status').value;
       currentVoter.Support_Status = document.getElementById('support-status').value;
 
-      const url = sheetsUrls[currentVoter.Precinct];
+      const toggleName = `Precinct ${currentVoter.Precinct}`;
+      const url = sheetsUrls[toggleName];
+//      const url = sheetsUrls[currentVoter.Precinct];
       log(`POST to ${url} with ${JSON.stringify(currentVoter)}`);
       const res = await fetch(url, {
         method: 'POST',
