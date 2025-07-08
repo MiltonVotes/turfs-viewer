@@ -9,7 +9,7 @@
   <style>
     body { margin: 0; font-family: Arial, sans-serif; }
     #header {
-      display: flex; justify-content: space-between; align-items: flex-start; margin: 10px;
+      display: flex; justify-content: space-between; align-items: center; margin: 10px;
     }
     #precinct-container, #legend {
       background: white; border: 1px solid #ccc; padding: 10px;
@@ -28,7 +28,7 @@
       display: flex; align-items: center; margin-bottom: 5px;
     }
     .legend-icon {
-      width: 32px; height: 32px; margin-right: 8px;
+      width: 20px; height: 20px; margin-right: 8px;
     }
     #map { height: 70vh; }
     #table-view {
@@ -48,6 +48,7 @@
     .row-yellow { background-color: #fff9cc; }
     .row-purple { background-color: #f2e6ff; }
     .row-gray { background-color: #eeeeee; }
+
     #modal {
       position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
       background: white; padding: 20px; border: 2px solid black; display: none;
@@ -84,7 +85,12 @@
     <div id="legend">
       <details open>
         <summary><b>Legend</b></summary>
-        <div id="legend-items"></div>
+        <div class="legend-item"><img class="legend-icon" src="https://maps.google.com/mapfiles/ms/icons/blue.png"> Not Visited</div>
+        <div class="legend-item"><img class="legend-icon" src="https://maps.google.com/mapfiles/ms/icons/blue-dot.png"> No Answer</div>
+        <div class="legend-item"><img class="legend-icon" src="https://maps.google.com/mapfiles/ms/icons/green.png"> Supports</div>
+        <div class="legend-item"><img class="legend-icon" src="https://maps.google.com/mapfiles/ms/icons/red.png"> Declined</div>
+        <div class="legend-item"><img class="legend-icon" src="https://maps.google.com/mapfiles/ms/icons/yellow.png"> Unsure</div>
+        <div class="legend-item"><img class="legend-icon" src="https://maps.google.com/mapfiles/ms/icons/purple.png"> Already Involved</div>
       </details>
     </div>
   </div>
@@ -94,9 +100,14 @@
 
   <div id="modal">
     <div id="card-content"></div>
-    <div class="modal-field"><b>Phone:</b><input type="text" id="phone-input"></div>
-    <div class="modal-field"><b>Email:</b><input type="text" id="email-input"></div>
-    <div class="modal-field"><b>Visited:</b>
+    <div class="modal-field">
+      <b>Phone:</b><input type="text" id="phone-input">
+    </div>
+    <div class="modal-field">
+      <b>Email:</b><input type="text" id="email-input">
+    </div>
+    <div class="modal-field">
+      <b>Visited:</b>
       <select id="visit-status">
         <option value="">-- Select --</option>
         <option value="Not Visited">Not Visited</option>
@@ -104,7 +115,8 @@
         <option value="Spoke to Someone">Spoke to Someone</option>
       </select>
     </div>
-    <div class="modal-field"><b>Supports:</b>
+    <div class="modal-field">
+      <b>Supports:</b>
       <select id="support-status">
         <option value="">-- Select --</option>
         <option value="Supports">Supports</option>
@@ -113,7 +125,9 @@
         <option value="Already Involved">Already Involved</option>
       </select>
     </div>
-    <div class="modal-field"><b>Notes:</b><input type="text" id="notes-input"></div>
+    <div class="modal-field">
+      <b>Notes:</b><input type="text" id="notes-input">
+    </div>
     <div class="modal-buttons">
       <button id="close-btn">Close</button>
       <button id="save-btn">Save</button>
@@ -130,7 +144,9 @@
 
     let allMarkers = [], markerMap = new Map(), currentData = {}, precinctMarkers = {}, selectedPrecincts = {}, currentVoter = null, sheetsUrls = {};
 
-    function jitter(coord) { return coord + (Math.random() * 2 - 1) * 0.0001; }
+    function jitter(coord) {
+      return coord + (Math.random() * 2 - 1) * 0.0001;
+    }
 
     function log(msg) {
       const el = document.getElementById('log');
@@ -140,14 +156,14 @@
 
     function getColor(v, s) {
       if (v === 'Not Visited') return 'blue';
-      if (v === 'No Answer') return 'blue';
+      if (v === 'No Answer') return 'blue-dot';
       if (v === 'Spoke to Someone') {
         switch (s) {
           case 'Supports': return 'green';
           case 'Declined': return 'red';
           case 'Unsure': return 'yellow';
           case 'Already Involved': return 'purple';
-          default: return 'blue';
+          default: return 'blue-dot';
         }
       }
       return 'gray';
@@ -159,44 +175,9 @@
       return L.ExtraMarkers.icon({
         icon: 'fa-number',
         number: voter.Num_Voters || '',
-        markerColor: color,
+        markerColor: color.includes('blue') ? 'blue' : color,
         shape: shape,
         prefix: 'fa'
-      });
-    }
-
-    function buildExtraMarkersLegend() {
-      const legendItems = [
-        { label: "Not Visited", color: "blue", shape: "circle" },
-        { label: "No Answer", color: "blue", shape: "circle" },
-        { label: "Supports", color: "green", shape: "circle" },
-        { label: "Declined", color: "red", shape: "circle" },
-        { label: "Unsure", color: "yellow", shape: "circle" },
-        { label: "Already Involved", color: "purple", shape: "circle" },
-        { label: "Voted 2025", color: "blue", shape: "star" }
-      ];
-
-      const container = document.getElementById('legend-items');
-      container.innerHTML = '';
-
-      legendItems.forEach(item => {
-        const icon = L.ExtraMarkers.icon({
-          icon: 'fa-number',
-          number: '',
-          markerColor: item.color,
-          shape: item.shape,
-          prefix: 'fa'
-        });
-
-        const iconEl = icon.createIcon();
-        iconEl.className = 'legend-icon';
-
-        const div = document.createElement('div');
-        div.className = 'legend-item';
-
-        div.appendChild(iconEl);
-        div.appendChild(document.createTextNode(` ${item.label}`));
-        container.appendChild(div);
       });
     }
 
@@ -233,6 +214,9 @@
       precinctMarkers[name] = [];
 
       data.forEach(v => {
+        // RDC: don't need to alter 'Precinct' column
+//        v.Precinct = name.replace('Precinct ', '');
+//        v.Precinct = name;
         const lat = jitter(parseFloat(v.Latitude)), lng = jitter(parseFloat(v.Longitude));
         if (isNaN(lat) || isNaN(lng)) return;
         const marker = L.marker([lat, lng], { icon: getIcon(v) }).addTo(map);
@@ -305,6 +289,7 @@
       currentVoter.Support_Status = document.getElementById('support-status').value;
 
       const url = sheetsUrls[`Precinct ${currentVoter.Precinct}`];
+//      const url = sheetsUrls[currentVoter.Precinct];
       log(`POST to ${url} with ${JSON.stringify(currentVoter)}`);
       const res = await fetch(url, {
         method: 'POST',
@@ -348,7 +333,6 @@
     };
 
     loadPrecincts();
-    buildExtraMarkersLegend();
   </script>
 </body>
 </html>
